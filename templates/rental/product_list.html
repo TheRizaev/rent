@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Каталог товаров - Аренда оборудования{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="search-form">
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" name="search" class="form-control" placeholder="Поиск товаров..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Найти
+                    </button>
+                </div>
+            </form>
+            
+            <div class="filter-tags">
+                <a href="?" class="btn tag-btn {% if not selected_tag %}active{% endif %}">Все товары</a>
+                {% for tag in tags %}
+                    <a href="?tag={{ tag.id }}" class="btn tag-btn {% if selected_tag == tag.id|stringformat:'s' %}active{% endif %}">
+                        {{ tag.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for product in products %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card product-card">
+            {% if product.photo %}
+                <img src="{{ product.photo.url }}" class="card-img-top product-image" alt="{{ product.name }}">
+            {% else %}
+                <div class="card-img-top product-image bg-light d-flex align-items-center justify-content-center">
+                    <i class="fas fa-image fa-3x text-muted"></i>
+                </div>
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="text-muted small">Арт. {{ product.article }}</p>
+                {% if product.description %}
+                    <p class="card-text">{{ product.description|truncatewords:15 }}</p>
+                {% endif %}
+                <div class="mt-auto">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span>
+                        <span class="badge bg-secondary">{{ product.available_quantity }} шт.</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'rental:product_detail' product.id %}" class="btn btn-outline-primary flex-grow-1">
+                            Подробнее
+                        </a>
+                        {% if product.available_quantity > 0 %}
+                            <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-cart-plus"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h3 class="text-muted">Товары не найдены</h3>
+            <p class="text-muted">Попробуйте изменить параметры поиска</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

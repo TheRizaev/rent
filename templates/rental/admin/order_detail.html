@@ -1,0 +1,204 @@
+{% extends 'rental/admin/base_admin.html' %}
+
+{% block title %}Заявка #{{ order.id }} - Админ панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Заявка #{{ order.id }}</h1>
+    <div>
+        <a href="{% url 'rental:download_order_pdf' order.id %}" class="btn btn-outline-primary">
+            <i class="fas fa-download"></i> Скачать PDF
+        </a>
+        <a href="{% url 'admin_orders' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация о заявке</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Контактное лицо:</strong></div>
+                    <div class="col-sm-9">{{ order.contact_person }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Основной телефон:</strong></div>
+                    <div class="col-sm-9">{{ order.phone1 }}</div>
+                </div>
+                {% if order.phone2 %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Дополнительный телефон:</strong></div>
+                    <div class="col-sm-9">{{ order.phone2 }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Период аренды:</strong></div>
+                    <div class="col-sm-9">{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Дата создания:</strong></div>
+                    <div class="col-sm-9">{{ order.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Создана админом:</strong></div>
+                    <div class="col-sm-9">
+                        {% if order.created_by_admin %}
+                            <span class="badge bg-info">Да</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Нет</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if order.comment %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Комментарий:</strong></div>
+                    <div class="col-sm-9">{{ order.comment }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Общая сумма:</strong></div>
+                    <div class="col-sm-9"><span class="h5 text-success">{{ order.total_amount }} ₽</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Товары в заявке</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Артикул</th>
+                                <th>Количество</th>
+                                <th>Цена за день</th>
+                                <th>Сумма</th>
+                                <th>Место хранения</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.photo %}
+                                            <img src="{{ item.product.photo.url }}" alt="{{ item.product.name }}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
+                                        {% endif %}
+                                        <strong>{{ item.product.name }}</strong>
+                                    </div>
+                                </td>
+                                <td><code>{{ item.product.article }}</code></td>
+                                <td>{{ item.quantity }} шт.</td>
+                                <td>{{ item.price }} ₽</td>
+                                <td><strong>{{ item.price|floatformat:2 }} ₽</strong></td>
+                                <td><span class="badge bg-info">{{ item.product.shelf }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <td colspan="4"><strong>Итого:</strong></td>
+                                <td><strong class="text-success">{{ order.total_amount }} ₽</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Управление статусами</h5>
+            </div>
+            <div class="card-body">
+                <form id="statusForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Статус заявки</label>
+                        <select name="status" class="form-select" id="orderStatus">
+                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
+                            <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
+                            <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
+                            <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Статус оплаты</label>
+                        <select name="payment_status" class="form-select" id="paymentStatus">
+                            <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
+                            <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save"></i> Сохранить изменения
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Статус товаров</h5>
+            </div>
+            <div class="card-body">
+                {% for item in order.items.all %}
+                <div class="mb-2">
+                    <strong>{{ item.product.name }}</strong><br>
+                    <small class="text-muted">Доступно сейчас: {{ item.product.available_quantity }} шт.</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('statusForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(`{% url 'update_order_status' order.id %}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Показать уведомление об успехе
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = 'Статус успешно обновлен <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+            
+            // Обновить страницу через 2 секунды
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = 'Ошибка при обновлении статуса <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+    });
+});
+</script>
+{% endblock %}

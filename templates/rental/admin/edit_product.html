@@ -1,0 +1,105 @@
+{% extends 'rental/admin/base_admin.html' %}
+
+{% block title %}Редактировать товар - Админ панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Редактировать товар: {{ product.name }}</h1>
+    <a href="{% url 'product_management' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Название товара</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.article.id_for_label }}" class="form-label">Артикул</label>
+                        {{ form.article }}
+                        {% if form.article.errors %}
+                            <div class="text-danger">{{ form.article.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
+                        {% if product.photo %}
+                            <div class="mb-2">
+                                <img src="{{ product.photo.url }}" alt="{{ product.name }}" style="max-width: 200px;" class="img-thumbnail">
+                            </div>
+                        {% endif %}
+                        {{ form.photo }}
+                        {% if form.photo.errors %}
+                            <div class="text-danger">{{ form.photo.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Описание</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">Общее количество</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                            <div class="text-danger">{{ form.quantity.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Текущее доступное количество: {{ product.available_quantity }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.daily_price.id_for_label }}" class="form-label">Цена за день (₽)</label>
+                        {{ form.daily_price }}
+                        {% if form.daily_price.errors %}
+                            <div class="text-danger">{{ form.daily_price.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.shelf.id_for_label }}" class="form-label">Место хранения</label>
+                        {{ form.shelf }}
+                        {% if form.shelf.errors %}
+                            <div class="text-danger">{{ form.shelf.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.tags.id_for_label }}" class="form-label">Теги</label>
+                        {{ form.tags }}
+                        {% if form.tags.errors %}
+                            <div class="text-danger">{{ form.tags.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Удерживайте Ctrl для выбора нескольких тегов</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить изменения
+                </button>
+                <a href="{% url 'product_management' %}" class="btn btn-outline-secondary">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

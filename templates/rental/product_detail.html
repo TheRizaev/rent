@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Аренда оборудования{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        {% if product.photo %}
+            <img src="{{ product.photo.url }}" class="img-fluid rounded shadow" alt="{{ product.name }}">
+        {% else %}
+            <div class="bg-light rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
+                <i class="fas fa-image fa-5x text-muted"></i>
+            </div>
+        {% endif %}
+    </div>
+    <div class="col-md-6">
+        <h1>{{ product.name }}</h1>
+        <p class="text-muted">Артикул: {{ product.article }}</p>
+        
+        {% if product.description %}
+            <p class="lead">{{ product.description }}</p>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ product.daily_price }} ₽/день</h4>
+                    </div>
+                    <div class="col-6">
+                        <span class="badge bg-secondary fs-6">{{ product.available_quantity }} шт. в наличии</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <p><strong>Место хранения:</strong> {{ product.shelf }}</p>
+                    {% if product.tags.exists %}
+                        <p><strong>Теги:</strong></p>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for tag in product.tags.all %}
+                                <span class="badge bg-light text-dark">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                {% if product.available_quantity > 0 %}
+                    <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="mt-4">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label for="quantity" class="form-label">Количество:</label>
+                                <input type="number" name="quantity" id="quantity" class="form-control" value="1" min="1" max="{{ product.available_quantity }}">
+                            </div>
+                            <div class="col-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-cart-plus"></i> Добавить в корзину
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-warning mt-4">
+                        <i class="fas fa-exclamation-triangle"></i> Товар временно недоступен
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{% url 'rental:product_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Вернуться к каталогу
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Корзина - Аренда оборудования{% endblock %}
+
+{% block content %}
+<h1>Корзина</h1>
+
+{% if cart_items %}
+    <div class="row">
+        <div class="col-lg-8">
+            {% for item in cart_items %}
+                <div class="card mb-3">
+                    <div class="row g-0">
+                        <div class="col-md-3">
+                            {% if item.product.photo %}
+                                <img src="{{ item.product.photo.url }}" class="img-fluid rounded-start" alt="{{ item.product.name }}" style="height: 150px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light rounded-start d-flex align-items-center justify-content-center" style="height: 150px;">
+                                    <i class="fas fa-image fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ item.product.name }}</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">Арт. {{ item.product.article }}</small>
+                                </p>
+                                <p class="card-text">
+                                    <strong>Цена:</strong> {{ item.product.daily_price }} ₽/день<br>
+                                    <strong>Количество:</strong> {{ item.quantity }} шт.<br>
+                                    <strong>Сумма:</strong> {{ item.total }} ₽
+                                </p>
+                                <form method="post" action="{% url 'rental:remove_from_cart' item.product.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Итого</h5>
+                    <p class="h4 text-success">{{ total }} ₽</p>
+                    <hr>
+                    <a href="{% url 'rental:checkout' %}" class="btn btn-primary w-100">
+                        <i class="fas fa-credit-card"></i> Оформить заявку
+                    </a>
+                    <a href="{% url 'rental:product_list' %}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-arrow-left"></i> Продолжить покупки
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-shopping-cart fa-5x text-muted mb-3"></i>
+        <h3 class="text-muted">Корзина пуста</h3>
+        <p class="text-muted">Добавьте товары в корзину, чтобы продолжить</p>
+        <a href="{% url 'rental:product_list' %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Перейти к каталогу
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

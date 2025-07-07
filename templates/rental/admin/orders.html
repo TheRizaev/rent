@@ -1,0 +1,130 @@
+{% extends 'rental/admin/base_admin.html' %}
+
+{% block title %}Заявки - Админ панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Заявки</h1>
+    <a href="{% url 'admin_create_order' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Создать заявку
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <select name="status" class="form-select">
+                    <option value="">Все статусы</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
+                    <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Подтверждена</option>
+                    <option value="in_rent" {% if status_filter == 'in_rent' %}selected{% endif %}>В аренде</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Завершена</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <input type="text" name="search" class="form-control" placeholder="Поиск по имени, телефону или номеру заявки" value="{{ search_query }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Поиск</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Контактное лицо</th>
+                        <th>Телефон</th>
+                        <th>Период аренды</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                        <th>Оплата</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.contact_person }}</td>
+                        <td>{{ order.phone1 }}</td>
+                        <td>{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</td>
+                        <td>{{ order.total_amount }} ₽</td>
+                        <td>
+                            <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}">
+                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>
+                                <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
+                                <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}">
+                                <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
+                                <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
+                            </select>
+                        </td>
+                        <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
+                                Подробнее
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center">Заявок не найдено</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка изменения статуса заявки
+    document.querySelectorAll('.status-select, .payment-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const orderId = this.dataset.orderId;
+            const isStatus = this.classList.contains('status-select');
+            const value = this.value;
+            
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            if (isStatus) {
+                formData.append('status', value);
+            } else {
+                formData.append('payment_status', value);
+            }
+            
+            fetch(`/superuser/orders/${orderId}/update-status/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Показать уведомление об успехе
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success alert-dismissible fade show';
+                    alert.innerHTML = 'Статус успешно обновлен <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

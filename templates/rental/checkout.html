@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Оформление заявки - Аренда оборудования{% endblock %}
+
+{% block content %}
+<h1>Оформление заявки</h1>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Контактная информация</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="{{ form.contact_person.id_for_label }}" class="form-label">Контактное лицо</label>
+                            {{ form.contact_person }}
+                            {% if form.contact_person.errors %}
+                                <div class="text-danger">{{ form.contact_person.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone1.id_for_label }}" class="form-label">Основной телефон</label>
+                            {{ form.phone1 }}
+                            {% if form.phone1.errors %}
+                                <div class="text-danger">{{ form.phone1.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone2.id_for_label }}" class="form-label">Дополнительный телефон</label>
+                            {{ form.phone2 }}
+                            {% if form.phone2.errors %}
+                                <div class="text-danger">{{ form.phone2.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.rental_start.id_for_label }}" class="form-label">Дата начала аренды</label>
+                            {{ form.rental_start }}
+                            {% if form.rental_start.errors %}
+                                <div class="text-danger">{{ form.rental_start.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.rental_end.id_for_label }}" class="form-label">Дата окончания аренды</label>
+                            {{ form.rental_end }}
+                            {% if form.rental_end.errors %}
+                                <div class="text-danger">{{ form.rental_end.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ form.comment.id_for_label }}" class="form-label">Комментарий</label>
+                            {{ form.comment }}
+                            {% if form.comment.errors %}
+                                <div class="text-danger">{{ form.comment.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Отправить заявку
+                        </button>
+                        <a href="{% url 'rental:cart' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Вернуться в корзину
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Ваш заказ</h5>
+                {% for item in cart_items %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ item.product.name }} x{{ item.quantity }}</span>
+                        <span>{{ item.total }} ₽</span>
+                    </div>
+                {% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Итого:</strong>
+                    <strong class="text-success">{{ total }} ₽</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

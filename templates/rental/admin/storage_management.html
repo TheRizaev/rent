@@ -1,0 +1,123 @@
+{% extends 'rental/admin/base_admin.html' %}
+
+{% block title %}Управление стойками - Админ панель{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Управление стойками</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Добавить стойку</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ storage_form.name.label_tag }}
+                        {{ storage_form.name }}
+                    </div>
+                    <button type="submit" name="add_storage" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Добавить стойку
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Добавить полку</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ shelf_form.storage.label_tag }}
+                        {{ shelf_form.storage }}
+                    </div>
+                    <div class="mb-3">
+                        {{ shelf_form.number.label_tag }}
+                        {{ shelf_form.number }}
+                    </div>
+                    <button type="submit" name="add_shelf" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Добавить полку
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Стойки</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Количество полок</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for storage in storages %}
+                            <tr>
+                                <td>{{ storage.name }}</td>
+                                <td>{{ storage.shelf_set.count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center">Стоек пока нет</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Полки</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Стойка</th>
+                                <th>Номер полки</th>
+                                <th>Полное название</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shelf in shelves %}
+                            <tr>
+                                <td>{{ shelf.storage.name }}</td>
+                                <td>{{ shelf.number }}</td>
+                                <td><strong>{{ shelf }}</strong></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">Полок пока нет</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
