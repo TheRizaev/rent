@@ -38,7 +38,10 @@
                 {% endif %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Период аренды:</strong></div>
-                    <div class="col-sm-9">{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</div>
+                    <div class="col-sm-9">
+                        {{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}
+                        <span class="badge bg-info ms-2">{{ order.get_rental_days }} дн.</span>
+                    </div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Дата создания:</strong></div>
@@ -62,7 +65,10 @@
                 {% endif %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Общая сумма:</strong></div>
-                    <div class="col-sm-9"><span class="h5 text-success">{{ order.total_amount }} сум</span></div>
+                    <div class="col-sm-9">
+                        <span class="h5 text-success">{{ order.total_amount }} сум</span>
+                        <small class="text-muted d-block">{{ order.get_daily_average|floatformat:0 }} сум/день</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -79,7 +85,7 @@
                                 <th>Товар</th>
                                 <th>Артикул</th>
                                 <th>Количество</th>
-                                <th>Цена за день</th>
+                                <th>Цена за период</th>
                                 <th>Сумма</th>
                                 <th>Место хранения</th>
                             </tr>
@@ -92,13 +98,16 @@
                                         {% if item.product.photo %}
                                             <img src="{{ item.product.photo.url }}" alt="{{ item.product.name }}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
                                         {% endif %}
-                                        <strong>{{ item.product.name }}</strong>
+                                        <div>
+                                            <strong>{{ item.product.name }}</strong><br>
+                                            <small class="text-muted">{{ item.product.daily_price }} сум/день</small>
+                                        </div>
                                     </div>
                                 </td>
                                 <td><code>{{ item.product.article }}</code></td>
                                 <td>{{ item.quantity }} шт.</td>
                                 <td>{{ item.price }} сум</td>
-                                <td><strong>{{ item.price|floatformat:2 }} сум</strong></td>
+                                <td><strong>{{ item.get_total|floatformat:2 }} сум</strong></td>
                                 <td><span class="badge bg-info">{{ item.product.shelf }}</span></td>
                             </tr>
                             {% endfor %}
@@ -157,7 +166,10 @@
                 {% for item in order.items.all %}
                 <div class="mb-2">
                     <strong>{{ item.product.name }}</strong><br>
-                    <small class="text-muted">Доступно сейчас: {{ item.product.available_quantity }} шт.</small>
+                    <small class="text-muted">
+                        Заказано: {{ item.quantity }} шт.<br>
+                        Доступно сейчас: {{ item.product.available_quantity }} шт.
+                    </small>
                 </div>
                 {% endfor %}
             </div>
@@ -190,6 +202,15 @@ document.getElementById('statusForm').addEventListener('submit', function(e) {
             setTimeout(() => {
                 location.reload();
             }, 2000);
+        } else {
+            // Показать ошибку
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `<strong>Ошибка:</strong> ${data.error || 'Не удалось обновить статус'} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+            
+            // Сбрасываем форму к исходному состоянию
+            location.reload();
         }
     })
     .catch(error => {

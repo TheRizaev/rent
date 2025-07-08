@@ -59,6 +59,25 @@
             color: white;
             border-radius: 15px;
         }
+        
+        .admin-header {
+            background-color: #34495e;
+            color: white;
+            padding: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .logout-btn {
+            color: #e74c3c;
+            border-top: 1px solid #34495e;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+        
+        .logout-btn:hover {
+            background-color: #e74c3c;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -66,8 +85,11 @@
         <div class="row">
             <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky">
-                    <div class="text-center p-3">
-                        <h5 class="text-white">Админ панель</h5>
+                    <div class="admin-header text-center">
+                        <h5 class="text-white mb-1">Админ панель</h5>
+                        {% if user.is_authenticated %}
+                            <small class="text-light">{{ user.username }}</small>
+                        {% endif %}
                     </div>
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -115,6 +137,11 @@
                                 <i class="fas fa-home"></i> На сайт
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link logout-btn" href="/admin/logout/" onclick="return confirm('Вы действительно хотите выйти?')">
+                                <i class="fas fa-sign-out-alt"></i> Выход
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
@@ -139,4 +166,3 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
-</html>

@@ -64,29 +64,55 @@ def update_order_status(request, order_id):
         new_status = request.POST.get('status')
         new_payment_status = request.POST.get('payment_status')
         
+        # Проверяем, не пытается ли пользователь изменить уже завершенную заявку
+        if order.status == 'completed':
+            return JsonResponse({
+                'success': False, 
+                'error': 'Нельзя изменить статус завершенной заявки!'
+            })
+        
         old_status = order.status
         
         if new_status:
-            order.status = new_status
-            
-            # Логика списания/возврата товаров
+            # Проверяем доступность товаров при подтверждении
             if old_status == 'pending' and new_status == 'confirmed':
-                # Подтверждение заявки - списываем товары
+                # Проверяем доступность всех товаров
+                for item in order.items.all():
+                    if item.product.available_quantity < item.quantity:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Недостаточно товара "{item.product.name}" на складе. Доступно: {item.product.available_quantity}, требуется: {item.quantity}'
+                        })
+                
+                # Если все товары доступны, списываем их
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity -= item.quantity
                     product.save()
                     
-            elif old_status == 'in_rent' and new_status == 'completed':
-                # Завершение аренды - возвращаем товары
+            elif old_status == 'confirmed' and new_status == 'in_rent':
+                # Товары уже списаны при подтверждении, ничего не делаем
+                pass
+                
+            elif (old_status == 'in_rent' or old_status == 'confirmed') and new_status == 'completed':
+                # Завершение аренды - возвращаем товары на склад
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
                     
-            elif new_status == 'in_rent' and old_status == 'confirmed':
-                # Товары уже списаны при подтверждении
+            elif old_status == 'confirmed' and new_status == 'pending':
+                # Отмена подтверждения - возвращаем товары
+                for item in order.items.all():
+                    product = item.product
+                    product.available_quantity += item.quantity
+                    product.save()
+                    
+            elif old_status == 'in_rent' and new_status == 'confirmed':
+                # Возврат из аренды в подтвержденную - ничего не делаем, товары уже списаны
                 pass
+            
+            order.status = new_status
         
         if new_payment_status:
             order.payment_status = new_payment_status
@@ -295,6 +321,23 @@ def admin_create_order(request):
             # Получаем товары из POST данных
             cart_data = request.POST.get('cart_data', '[]')
             cart_items = json.loads(cart_data)
+            
+            # Проверяем доступность товаров
+            for item in cart_items:
+                try:
+                    product = Product.objects.get(id=item['product_id'])
+                    if product.available_quantity < item['quantity']:
+                        messages.error(request, f'Недостаточно товара "{product.name}" на складе. Доступно: {product.available_quantity}')
+                        return render(request, 'rental/admin/create_order.html', {
+                            'form': form,
+                            'products': Product.objects.filter(available_quantity__gt=0)
+                        })
+                except Product.DoesNotExist:
+                    messages.error(request, 'Один из товаров не найден')
+                    return render(request, 'rental/admin/create_order.html', {
+                        'form': form,
+                        'products': Product.objects.filter(available_quantity__gt=0)
+                    })
             
             # Рассчитываем общую сумму
             total = 0

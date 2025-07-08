@@ -30,3 +30,28 @@ def range_filter(value):
 def get_item(dictionary, key):
     """Получает элемент из словаря по ключу"""
     return dictionary.get(key)
+
+@register.filter
+def div(value, arg):
+    """Делит значение на аргумент"""
+    try:
+        return float(value) / float(arg)
+    except (ValueError, TypeError, ZeroDivisionError):
+        return 0
+
+@register.filter
+def sub(value, arg):
+    """Вычитает аргумент из значения (псевдоним для subtract)"""
+    try:
+        return float(value) - float(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
+def add(value, arg):
+    """Добавляет аргумент к значению"""
+    try:
+        return float(value) + float(arg)
+    except (ValueError, TypeError):
+        return 0
+    

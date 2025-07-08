@@ -142,6 +142,17 @@ class Order(models.Model):
     def __str__(self):
         return f"Заявка #{self.id} - {self.contact_person}"
     
+    def get_rental_days(self):
+        """Возвращает количество дней аренды"""
+        return (self.rental_end - self.rental_start).days + 1
+    
+    def get_daily_average(self):
+        """Возвращает среднюю стоимость за день"""
+        rental_days = self.get_rental_days()
+        if rental_days > 0:
+            return self.total_amount / rental_days
+        return 0
+    
     class Meta:
         verbose_name = 'Заявка'
         verbose_name_plural = 'Заявки'
@@ -155,6 +166,10 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+    
+    def get_total(self):
+        """Возвращает общую стоимость позиции"""
+        return self.price * self.quantity
     
     class Meta:
         verbose_name = 'Позиция заявки'

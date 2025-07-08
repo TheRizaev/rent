@@ -58,18 +58,31 @@
                         <td>{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</td>
                         <td>{{ order.total_amount }} сум</td>
                         <td>
-                            <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}">
-                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>
-                                <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
-                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
-                            </select>
+                            {% if order.status == 'completed' %}
+                                <span class="badge bg-success">Завершена</span>
+                                <small class="text-muted d-block">Изменение запрещено</small>
+                            {% else %}
+                                <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}" data-original-value="{{ order.status }}">
+                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>
+                                    <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
+                                    <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
+                                    <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
+                                </select>
+                            {% endif %}
                         </td>
                         <td>
-                            <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}">
-                                <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
-                                <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
-                            </select>
+                            {% if order.status == 'completed' %}
+                                {% if order.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Оплачена</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Не оплачена</span>
+                                {% endif %}
+                            {% else %}
+                                <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}" data-original-value="{{ order.payment_status }}">
+                                    <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
+                                    <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
+                                </select>
+                            {% endif %}
                         </td>
                         <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
                         <td>
@@ -93,15 +106,33 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Получаем CSRF токен
+    function getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            return csrfToken.value;
+        }
+        // Если токена нет на странице, получаем из cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                return value;
+            }
+        }
+        return '';
+    }
+
     // Обработка изменения статуса заявки
     document.querySelectorAll('.status-select, .payment-select').forEach(function(select) {
         select.addEventListener('change', function() {
             const orderId = this.dataset.orderId;
             const isStatus = this.classList.contains('status-select');
             const value = this.value;
+            const originalValue = this.getAttribute('data-original-value');
             
             const formData = new FormData();
-            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            formData.append('csrfmiddlewaretoken', getCSRFToken());
             
             if (isStatus) {
                 formData.append('status', value);
@@ -117,14 +148,52 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Показать уведомление об успехе
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-success alert-dismissible fade show';
-                    alert.innerHTML = 'Статус успешно обновлен <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                    document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+                    showAlert('success', 'Статус успешно обновлен');
+                    
+                    // Обновляем оригинальное значение
+                    this.setAttribute('data-original-value', value);
+                    
+                    // Если заявка завершена, перезагружаем страницу для обновления интерфейса
+                    if (value === 'completed') {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    }
+                } else {
+                    // Показать ошибку и вернуть к оригинальному значению
+                    showAlert('danger', data.error || 'Не удалось обновить статус');
+                    
+                    // Возвращаем к оригинальному значению
+                    this.value = originalValue;
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Ошибка при обновлении статуса');
+                
+                // Возвращаем к оригинальному значению
+                this.value = originalValue;
             });
         });
     });
+    
+    function showAlert(type, message) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        
+        const main = document.querySelector('main');
+        if (main) {
+            main.insertBefore(alert, main.firstChild);
+        }
+        
+        // Автоматически скрыть через 5 секунд
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
 });
 </script>
 {% endblock %}

@@ -9,11 +9,16 @@ from .forms import OrderForm
 import json
 from datetime import datetime, timedelta
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.units import inch, cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
+import os
 
 def product_list(request):
     products = Product.objects.filter(available_quantity__gt=0)
@@ -66,21 +71,17 @@ def cart_view(request):
                 # Неизвестный формат, пропускаем
                 continue
             
-            # Рассчитываем стоимость для одного дня (для отображения базовой цены)
-            daily_total = product.daily_price * quantity
-            # Полная стоимость с учетом дней
-            item_total = daily_total * days
+            # Рассчитываем стоимость (без скидок)
+            item_total = product.daily_price * quantity * days
             
             cart_items.append({
                 'product': product,
                 'quantity': quantity,
                 'days': days,
-                'daily_total': daily_total,
                 'total': item_total
             })
             
-            # В total храним стоимость за день для совместимости
-            total += daily_total
+            total += item_total
             
         except Product.DoesNotExist:
             # Удаляем несуществующие товары из корзины
@@ -114,7 +115,7 @@ def add_to_cart(request, product_id):
         
         if quantity > product.available_quantity:
             messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}')
-            return redirect('rental:product_detail', product_id=product_id)
+            return redirect(request.META.get('HTTP_REFERER', 'rental:product_detail'), product_id=product_id)
         
         cart = request.session.get('cart', {})
         
@@ -138,7 +139,7 @@ def add_to_cart(request, product_id):
         # Проверяем, не превышает ли общее количество доступное
         if current_quantity + quantity > product.available_quantity:
             messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}, уже в корзине: {current_quantity}')
-            return redirect('rental:product_detail', product_id=product_id)
+            return redirect(request.META.get('HTTP_REFERER', 'rental:product_detail'), product_id=product_id)
         
         # Сохраняем в новом формате
         cart[str(product_id)] = {
@@ -151,8 +152,15 @@ def add_to_cart(request, product_id):
         
         messages.success(request, f'{product.name} добавлен в корзину на {days} дней')
         
-        return redirect('rental:cart')
+        # Возвращаемся на предыдущую страницу
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
+        else:
+            # Если нет referrer, возвращаемся на страницу товара
+            return redirect('rental:product_detail', product_id=product_id)
     
+    # Если не POST запрос, возвращаемся на страницу товара
     return redirect('rental:product_detail', product_id=product_id)
 
 def remove_from_cart(request, product_id):
@@ -175,6 +183,12 @@ def remove_from_cart(request, product_id):
     
     return redirect('rental:cart')
 
+def cart_count_api(request):
+    """API для получения количества товаров в корзине"""
+    cart = request.session.get('cart', {})
+    count = len(cart)
+    return JsonResponse({'count': count})
+
 def checkout(request):
     cart = request.session.get('cart', {})
     
@@ -182,39 +196,29 @@ def checkout(request):
         messages.error(request, 'Корзина пуста')
         return redirect('rental:cart')
     
-    # Получаем количество дней из GET параметра
-    rental_days = int(request.GET.get('days', 1))
-    
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
             
-            # Рассчитываем общую сумму с учетом дней
+            # Рассчитываем общую сумму (без скидок)
             total = 0
+            
             for product_id, item_data in cart.items():
                 try:
                     product = Product.objects.get(id=product_id)
                     
                     if isinstance(item_data, int):
                         quantity = item_data
-                        days = rental_days
+                        days = 1
                     else:
                         quantity = item_data.get('quantity', 1)
-                        days = item_data.get('days', rental_days)
+                        days = item_data.get('days', 1)
                     
                     item_total = product.daily_price * quantity * days
                     total += item_total
                 except Product.DoesNotExist:
                     pass
-            
-            # Применяем скидки
-            if rental_days >= 30:
-                total *= 0.85  # 15% скидка
-            elif rental_days >= 14:
-                total *= 0.90  # 10% скидка
-            elif rental_days >= 7:
-                total *= 0.95  # 5% скидка
             
             order.total_amount = total
             order.created_by_admin = request.user.is_staff if request.user.is_authenticated else False
@@ -232,16 +236,16 @@ def checkout(request):
                     
                     if isinstance(item_data, int):
                         quantity = item_data
-                        days = rental_days
+                        days = 1
                     else:
                         quantity = item_data.get('quantity', 1)
-                        days = item_data.get('days', rental_days)
+                        days = item_data.get('days', 1)
                     
                     OrderItem.objects.create(
                         order=order,
                         product=product,
                         quantity=quantity,
-                        price=product.daily_price * days  # Сохраняем цену с учетом дней
+                        price=product.daily_price * days  # Цена за весь период
                     )
                     
                     # Если заявка подтверждена, списываем товар
@@ -270,40 +274,28 @@ def checkout(request):
             
             if isinstance(item_data, int):
                 quantity = item_data
-                days = rental_days
+                days = 1
             else:
                 quantity = item_data.get('quantity', 1)
-                days = item_data.get('days', rental_days)
+                days = item_data.get('days', 1)
             
             item_total = product.daily_price * quantity * days
+            
             cart_items.append({
                 'product': product,
                 'quantity': quantity,
                 'days': days,
                 'total': item_total
             })
+            
             total += item_total
         except Product.DoesNotExist:
             pass
     
-    # Применяем скидки для отображения
-    discount = 0
-    if rental_days >= 30:
-        discount = 15
-    elif rental_days >= 14:
-        discount = 10
-    elif rental_days >= 7:
-        discount = 5
-    
-    discounted_total = total * (1 - discount / 100) if discount > 0 else total
-    
     context = {
         'form': form,
         'cart_items': cart_items,
-        'total': total,
-        'discounted_total': discounted_total,
-        'discount': discount,
-        'rental_days': rental_days
+        'total': total
     }
     return render(request, 'rental/checkout.html', context)
 
@@ -317,35 +309,242 @@ def download_order_pdf(request, order_id):
     
     # Создаем PDF
     buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+                           topMargin=2*cm, bottomMargin=2*cm)
+    
+    # Регистрируем русские шрифты
+    try:
+        # Пытаемся использовать системные шрифты
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.pdfbase import pdfmetrics
+        import os
+        import platform
+        
+        # Определяем путь к шрифтам в зависимости от ОС
+        if platform.system() == "Windows":
+            font_paths = [
+                "C:/Windows/Fonts/arial.ttf",
+                "C:/Windows/Fonts/calibri.ttf",
+                "C:/Windows/Fonts/times.ttf"
+            ]
+        elif platform.system() == "Darwin":  # macOS
+            font_paths = [
+                "/System/Library/Fonts/Arial.ttf",
+                "/System/Library/Fonts/Times.ttc"
+            ]
+        else:  # Linux
+            font_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+            ]
+        
+        # Ищем доступный шрифт
+        font_registered = False
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                try:
+                    pdfmetrics.registerFont(TTFont('RussianFont', font_path))
+                    pdfmetrics.registerFont(TTFont('RussianFont-Bold', font_path))
+                    font_registered = True
+                    break
+                except:
+                    continue
+        
+        if not font_registered:
+            # Если системные шрифты не найдены, используем встроенные
+            raise Exception("No system fonts found")
+            
+    except:
+        # Если не удалось загрузить TTF шрифты, используем встроенные шрифты с поддержкой кириллицы
+        # Используем шрифты, которые поддерживают расширенный набор символов
+        font_name = 'Helvetica'
+        font_name_bold = 'Helvetica-Bold'
+    else:
+        font_name = 'RussianFont'
+        font_name_bold = 'RussianFont-Bold'
+    
+    # Стили с русскими шрифтами
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    styles = getSampleStyleSheet()
+    
+    # Создаем собственные стили с русскими шрифтами
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontName=font_name_bold,
+        fontSize=24,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    header_style = ParagraphStyle(
+        'CustomHeader',
+        parent=styles['Heading2'],
+        fontName=font_name_bold,
+        fontSize=16,
+        spaceAfter=12,
+        textColor=colors.HexColor('#34495e')
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontName=font_name,
+        fontSize=11,
+        spaceAfter=6
+    )
+    
+    # Элементы документа
+    story = []
     
     # Заголовок
-    p.drawString(50, 750, f"Заявка #{order.id}")
-    p.drawString(50, 730, f"Дата создания: {order.created_at.strftime('%d.%m.%Y %H:%M')}")
-    p.drawString(50, 710, f"Период аренды: {order.rental_start.strftime('%d.%m.%Y')} - {order.rental_end.strftime('%d.%m.%Y')}")
-    p.drawString(50, 690, f"Контактное лицо: {order.contact_person}")
-    p.drawString(50, 670, f"Телефон: {order.phone1}")
+    story.append(Paragraph("ЗАЯВКА НА АРЕНДУ ОБОРУДОВАНИЯ", title_style))
+    story.append(Paragraph(f"№ {order.id}", title_style))
+    story.append(Spacer(1, 20))
+    
+    # Информация о заявке
+    story.append(Paragraph("ИНФОРМАЦИЯ О ЗАЯВКЕ", header_style))
+    
+    info_data = [
+        ['Дата создания:', order.created_at.strftime('%d.%m.%Y %H:%M')],
+        ['Период аренды:', f"{order.rental_start.strftime('%d.%m.%Y')} - {order.rental_end.strftime('%d.%m.%Y')}"],
+        ['Контактное лицо:', order.contact_person],
+        ['Телефон:', order.phone1],
+        ['Статус заявки:', order.get_status_display()],
+        ['Статус оплаты:', order.get_payment_status_display()],
+    ]
+    
     if order.phone2:
-        p.drawString(50, 650, f"Телефон 2: {order.phone2}")
-    
-    # Товары
-    y = 600
-    p.drawString(50, y, "Товары:")
-    y -= 20
-    
-    for item in order.items.all():
-        p.drawString(70, y, f"{item.product.name} (арт. {item.product.article})")
-        y -= 15
-        p.drawString(70, y, f"Количество: {item.quantity}, Цена: {item.price} руб./день")
-        y -= 20
-    
-    p.drawString(50, y-20, f"Общая сумма: {order.total_amount} руб.")
+        info_data.insert(4, ['Телефон 2:', order.phone2])
     
     if order.comment:
-        p.drawString(50, y-50, f"Комментарий: {order.comment}")
+        info_data.insert(-2, ['Комментарий:', order.comment])
     
-    p.showPage()
-    p.save()
+    if order.created_by_admin:
+        info_data.insert(-2, ['Создана администратором:', 'Да'])
+    
+    info_table = Table(info_data, colWidths=[4*cm, 12*cm])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('FONTNAME', (0, 0), (0, -1), font_name_bold),
+        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    
+    story.append(info_table)
+    story.append(Spacer(1, 20))
+    
+    # Товары
+    story.append(Paragraph("ТОВАРЫ В ЗАЯВКЕ", header_style))
+    
+    # Заголовки таблицы товаров
+    items_data = [['№', 'Наименование', 'Артикул', 'Кол-во', 'Цена за период', 'Сумма', 'Место']]
+    
+    total_sum = 0
+    for i, item in enumerate(order.items.all(), 1):
+        item_total = item.price * item.quantity
+        total_sum += item_total
+        
+        items_data.append([
+            str(i),
+            item.product.name[:30] + ('...' if len(item.product.name) > 30 else ''),
+            item.product.article,
+            f"{item.quantity} шт.",
+            f"{item.price:.0f} сум",
+            f"{item_total:.0f} сум",
+            str(item.product.shelf)
+        ])
+    
+    # Добавляем итоговую строку
+    items_data.append(['', '', '', '', 'ИТОГО:', f"{order.total_amount:.0f} сум", ''])
+    
+    items_table = Table(items_data, colWidths=[1*cm, 4.5*cm, 2*cm, 1.5*cm, 2*cm, 2*cm, 1.5*cm])
+    items_table.setStyle(TableStyle([
+        # Заголовок
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), font_name_bold),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        
+        # Содержимое
+        ('FONTNAME', (0, 1), (-1, -2), font_name),
+        ('FONTSIZE', (0, 1), (-1, -2), 9),
+        ('ALIGN', (0, 1), (0, -2), 'CENTER'),  # Номера по центру
+        ('ALIGN', (2, 1), (-1, -2), 'CENTER'),  # Числа по центру
+        ('ALIGN', (1, 1), (1, -2), 'LEFT'),    # Названия слева
+        
+        # Итоговая строка
+        ('FONTNAME', (0, -1), (-1, -1), font_name_bold),
+        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#ecf0f1')),
+        ('SPAN', (0, -1), (4, -1)),  # Объединяем ячейки для "ИТОГО"
+        
+        # Сетка
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        
+        # Отступы
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    
+    story.append(items_table)
+    story.append(Spacer(1, 30))
+    
+    # Дополнительная информация
+    story.append(Paragraph("ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ", header_style))
+    
+    # Рассчитываем количество дней аренды
+    rental_days = (order.rental_end - order.rental_start).days + 1
+    
+    additional_info = [
+        ['Количество дней аренды:', f"{rental_days} дн."],
+        ['Средняя стоимость в день:', f"{order.total_amount / rental_days:.0f} сум/день"],
+    ]
+    
+    additional_table = Table(additional_info, colWidths=[4*cm, 8*cm])
+    additional_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('FONTNAME', (0, 0), (0, -1), font_name_bold),
+        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    
+    story.append(additional_table)
+    story.append(Spacer(1, 40))
+    
+    # Подпись
+    footer_style = ParagraphStyle(
+        'Footer', 
+        parent=styles['Normal'], 
+        fontSize=9,
+        fontName=font_name,
+        textColor=colors.grey, 
+        alignment=TA_RIGHT
+    )
+    
+    story.append(Paragraph("Дата формирования документа: " + timezone.now().strftime('%d.%m.%Y %H:%M'), footer_style))
+    
+    # Генерируем PDF
+    doc.build(story)
     
     buffer.seek(0)
     response = HttpResponse(buffer.read(), content_type='application/pdf')
@@ -399,5 +598,59 @@ def update_cart_quantity(request):
                 messages.error(request, 'Товар не найден')
         else:
             messages.error(request, 'Товар не найден в корзине')
+    
+    return redirect('rental:cart')
+
+def update_cart_days(request):
+    product_id = request.GET.get('product_id')
+    new_days = request.GET.get('days')
+    
+    if not product_id or not new_days:
+        messages.error(request, 'Неверные параметры')
+        return redirect('rental:cart')
+    
+    try:
+        new_days = int(new_days)
+        if new_days < 1 or new_days > 365:
+            messages.error(request, 'Количество дней должно быть от 1 до 365')
+            return redirect('rental:cart')
+    except (ValueError, TypeError):
+        messages.error(request, 'Неверное количество дней')
+        return redirect('rental:cart')
+    
+    cart = request.session.get('cart', {})
+    
+    if str(product_id) in cart:
+        try:
+            product = Product.objects.get(id=product_id)
+            
+            # Обновляем количество дней
+            current_item = cart[str(product_id)]
+            
+            if isinstance(current_item, int):
+                # Старый формат - конвертируем в новый
+                cart[str(product_id)] = {
+                    'quantity': current_item,
+                    'days': new_days
+                }
+            elif isinstance(current_item, dict):
+                # Новый формат - обновляем дни
+                cart[str(product_id)]['days'] = new_days
+            else:
+                # Неизвестный формат - создаем новый
+                cart[str(product_id)] = {
+                    'quantity': 1,
+                    'days': new_days
+                }
+            
+            request.session['cart'] = cart
+            request.session.modified = True
+            
+            messages.success(request, f'Количество дней для "{product.name}" изменено на {new_days}')
+            
+        except Product.DoesNotExist:
+            messages.error(request, 'Товар не найден')
+    else:
+        messages.error(request, 'Товар не найден в корзине')
     
     return redirect('rental:cart')

@@ -12,9 +12,6 @@
                     <input type="text" name="search" class="form-control" placeholder="Поиск товаров..." value="{{ search_query }}">
                 </div>
                 <div class="col-md-3">
-                    <input type="number" name="days" class="form-control" placeholder="Количество дней" value="{{ request.GET.days|default:1 }}" min="1" max="30" id="daysFilter">
-                </div>
-                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-search"></i> Найти
                     </button>
@@ -28,12 +25,6 @@
                         {{ tag.name }}
                     </a>
                 {% endfor %}
-            </div>
-            
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-info-circle"></i> 
-                Цены указаны за <strong id="selectedDays">{{ request.GET.days|default:1 }}</strong> 
-                день{{ request.GET.days|default:1|pluralize:",,ей" }} аренды
             </div>
         </div>
     </div>
@@ -56,35 +47,60 @@
                 {% if product.description %}
                     <p class="card-text">{{ product.description|truncatewords:15 }}</p>
                 {% endif %}
-                <div class="mt-auto">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div>
-                            <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span><br>
-                            {% with days=request.GET.days|default:1 %}
-                                <small class="text-primary">
-                                    {{ product.daily_price|floatformat:0 }} × {{ days }} = 
-                                    <strong>{{ product.daily_price|mul:days|floatformat:0 }} ₽</strong>
-                                </small>
-                            {% endwith %}
+                
+                <!-- Форма добавления в корзину с количеством и днями -->
+                <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="mt-auto">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small">Количество:</label>
+                                <input type="number" name="quantity" class="form-control form-control-sm" value="1" min="1" max="{{ product.available_quantity }}" id="qty-{{ product.id }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Дней:</label>
+                                <input type="number" name="days" class="form-control form-control-sm" value="{{ request.GET.days|default:1 }}" min="1" max="365" id="days-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
+                            </div>
                         </div>
-                        <span class="badge bg-secondary">{{ product.available_quantity }} шт.</span>
                     </div>
+                    
+                    <div class="price-display mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span><br>
+                                <small class="text-primary" id="calc-{{ product.id }}">
+                                    {% with days=request.GET.days|default:1 %}
+                                        {{ product.daily_price|floatformat:0 }} × 1 × {{ days }} = 
+                                        <strong>{{ product.daily_price|mul:days|floatformat:0 }} ₽</strong>
+                                    {% endwith %}
+                                </small>
+                            </div>
+                            <span class="badge bg-secondary">{{ product.available_quantity }} шт.</span>
+                        </div>
+                        
+                        <!-- Информация о скидке -->
+                        <div id="discount-{{ product.id }}" class="mt-1" style="display: none;">
+                            <small class="text-success">
+                                <i class="fas fa-percent"></i> <span class="discount-text"></span>
+                            </small>
+                        </div>
+                    </div>
+                    
                     <div class="d-flex gap-2">
                         <a href="{% url 'rental:product_detail' product.id %}?days={{ request.GET.days|default:1 }}" class="btn btn-outline-primary flex-grow-1">
                             Подробнее
                         </a>
                         {% if product.available_quantity > 0 %}
-                            <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="quantity" value="1">
-                                <input type="hidden" name="days" value="{{ request.GET.days|default:1 }}">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-cart-plus"></i>
-                                </button>
-                            </form>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-secondary" disabled>
+                                <i class="fas fa-ban"></i>
+                            </button>
                         {% endif %}
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     </div>
@@ -102,40 +118,210 @@
 
 {% block extra_js %}
 <script>
-// Создаем фильтр для умножения
-function mul(a, b) {
-    return parseFloat(a || 0) * parseFloat(b || 0);
+function updateProductPrice(productId, dailyPrice) {
+    const quantityInput = document.getElementById('qty-' + productId);
+    const daysInput = document.getElementById('days-' + productId);
+    const calcDisplay = document.getElementById('calc-' + productId);
+    const discountDiv = document.getElementById('discount-' + productId);
+    
+    const quantity = parseInt(quantityInput.value) || 1;
+    const days = parseInt(daysInput.value) || 1;
+    
+    const baseTotal = dailyPrice * quantity * days;
+    let finalTotal = baseTotal;
+    let discount = 0;
+    let discountText = '';
+    
+    // Рассчитываем скидку
+    if (days >= 30) {
+        discount = 15;
+        discountText = 'Скидка 15% за аренду от 30 дней';
+    } else if (days >= 14) {
+        discount = 10;
+        discountText = 'Скидка 10% за аренду от 14 дней';
+    } else if (days >= 7) {
+        discount = 5;
+        discountText = 'Скидка 5% за аренду от 7 дней';
+    }
+    
+    if (discount > 0) {
+        finalTotal = baseTotal * (1 - discount / 100);
+    }
+    
+    // Обновляем отображение цены
+    calcDisplay.innerHTML = `
+        ${dailyPrice} × ${quantity} × ${days} = 
+        <strong>${finalTotal.toFixed(0)} ₽</strong>
+        ${discount > 0 ? '<del class="text-muted">' + baseTotal.toFixed(0) + ' ₽</del>' : ''}
+    `;
+    
+    // Показываем информацию о скидке
+    if (discount > 0) {
+        discountDiv.querySelector('.discount-text').textContent = discountText + ` (экономия: ${(baseTotal - finalTotal).toFixed(0)} ₽)`;
+        discountDiv.style.display = 'block';
+    } else {
+        discountDiv.style.display = 'none';
+    }
 }
 
-// Обновляем цены при изменении количества дней
+// Обновляем все цены при изменении количества дней в основном фильтре
 document.getElementById('daysFilter').addEventListener('input', function() {
     const days = parseInt(this.value) || 1;
     document.getElementById('selectedDays').textContent = days;
     
-    // Обновляем все цены на странице
-    document.querySelectorAll('.card-body').forEach(function(cardBody) {
-        const pricePerDay = parseFloat(cardBody.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
-        const totalPrice = pricePerDay * days;
-        const priceSmall = cardBody.querySelector('.text-primary small');
-        if (priceSmall) {
-            priceSmall.innerHTML = `${pricePerDay} × ${days} = <strong>${totalPrice.toFixed(0)} ₽</strong>`;
-        }
-    });
-    
-    // Обновляем скрытые поля в формах
+    // Обновляем все поля дней в карточках товаров
     document.querySelectorAll('input[name="days"]').forEach(function(input) {
         input.value = days;
+        const productId = input.id.split('-')[1];
+        const productCard = input.closest('.card-body');
+        const dailyPrice = parseFloat(productCard.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+        updateProductPrice(productId, dailyPrice);
     });
-});
-
-// Обновляем ссылки на детальные страницы
-document.getElementById('daysFilter').addEventListener('input', function() {
-    const days = this.value;
+    
+    // Обновляем ссылки на детальные страницы
     document.querySelectorAll('a[href*="product_detail"]').forEach(function(link) {
         const url = new URL(link.href);
         url.searchParams.set('days', days);
         link.href = url.toString();
     });
 });
+
+// Обновляем цены при изменении количества
+document.addEventListener('input', function(e) {
+    if (e.target.name === 'quantity' || e.target.name === 'days') {
+        const productId = e.target.id.split('-')[1];
+        const productCard = e.target.closest('.card-body');
+        const dailyPrice = parseFloat(productCard.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+        updateProductPrice(productId, dailyPrice);
+    }
+});
+
+function updateHeaderDiscount(days) {
+    const alertDiv = document.querySelector('.alert-info');
+    const selectedDaysSpan = document.getElementById('selectedDays');
+    let badge = alertDiv.querySelector('.badge');
+    
+    // Удаляем существующий badge
+    if (badge) {
+        badge.remove();
+    }
+    
+    // Добавляем новый badge если есть скидка
+    if (days >= 30) {
+        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 15%!</span>';
+    } else if (days >= 14) {
+        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 10%!</span>';
+    } else if (days >= 7) {
+        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 5%!</span>';
+    }
+}
+
+// Инициализируем цены при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.card-body').forEach(function(cardBody) {
+        const daysInput = cardBody.querySelector('input[name="days"]');
+        if (daysInput) {
+            const productId = daysInput.id.split('-')[1];
+            const dailyPrice = parseFloat(cardBody.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+            updateProductPrice(productId, dailyPrice);
+        }
+    });
+});
+</script>
+<script>
+// AJAX добавление в корзину
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка всех форм добавления в корзину
+    document.querySelectorAll('form[action*="add-to-cart"]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Предотвращаем обычную отправку формы
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            
+            // Показываем loading состояние
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Отправляем AJAX запрос
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Успешно добавлено
+                    submitButton.innerHTML = '<i class="fas fa-check text-success"></i>';
+                    submitButton.className = submitButton.className.replace('btn-primary', 'btn-success');
+                    
+                    // Обновляем счетчик корзины в навбаре
+                    updateCartCounter();
+                    
+                    // Показываем уведомление
+                    showNotification('Товар добавлен в корзину!', 'success');
+                    
+                    // Возвращаем кнопку в исходное состояние через 2 секунды
+                    setTimeout(() => {
+                        submitButton.innerHTML = originalText;
+                        submitButton.className = submitButton.className.replace('btn-success', 'btn-primary');
+                        submitButton.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Ошибка при добавлении товара');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitButton.innerHTML = '<i class="fas fa-times text-danger"></i>';
+                submitButton.disabled = false;
+                
+                showNotification('Ошибка при добавлении товара', 'error');
+                
+                // Возвращаем кнопку в исходное состояние
+                setTimeout(() => {
+                    submitButton.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    });
+});
+
+// Функция для обновления счетчика корзины
+function updateCartCounter() {
+    fetch('/cart-count/') // Нужно будет создать этот endpoint
+    .then(response => response.json())
+    .then(data => {
+        const cartCounter = document.querySelector('.cart-count');
+        if (cartCounter) {
+            cartCounter.textContent = data.count;
+            cartCounter.style.display = data.count > 0 ? 'inline' : 'none';
+        }
+    })
+    .catch(error => console.error('Error updating cart counter:', error));
+}
+
+// Функция для показа уведомлений
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Автоматически скрыть через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
 </script>
 {% endblock %}
