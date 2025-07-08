@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rental_project
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn ovi.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: rental_project.settings
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: DEBUG
+        value: False
+    plan: free
