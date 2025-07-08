@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load rental_filters %}
 
 {% block title %}{{ product.name }} - Аренда оборудования{% endblock %}
 
@@ -24,10 +25,8 @@
         <div class="card">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-12">
                         <h4 class="text-success">{{ product.daily_price }} ₽/день</h4>
-                    </div>
-                    <div class="col-6">
                         <span class="badge bg-secondary fs-6">{{ product.available_quantity }} шт. в наличии</span>
                     </div>
                 </div>
@@ -44,6 +43,38 @@
                     {% endif %}
                 </div>
                 
+                <!-- Калькулятор цены -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6><i class="fas fa-calculator"></i> Калькулятор стоимости</h6>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="form-label small">Количество:</label>
+                            <input type="number" id="calcQuantity" class="form-control form-control-sm" value="1" min="1" max="{{ product.available_quantity }}" onchange="updateCalculation()">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small">Дней:</label>
+                            <input type="number" id="calcDays" class="form-control form-control-sm" value="{{ request.GET.days|default:1 }}" min="1" max="365" onchange="updateCalculation()">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small">Итого:</label>
+                            <div class="fw-bold text-success" id="calculatedTotal">{{ product.daily_price }} ₽</div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            {{ product.daily_price }} ₽ × <span id="quantityDisplay">1</span> шт. × <span id="daysDisplay">{{ request.GET.days|default:1 }}</span> дн. = 
+                            <span class="fw-bold" id="totalDisplay">{{ product.daily_price|mul:request.GET.days|default:product.daily_price }} ₽</span>
+                        </small>
+                    </div>
+                    
+                    <!-- Скидки -->
+                    <div id="discountInfo" class="mt-2" style="display: none;">
+                        <small class="text-success">
+                            <i class="fas fa-percent"></i> <span id="discountText"></span>
+                        </small>
+                    </div>
+                </div>
+                
                 {% if product.available_quantity > 0 %}
                     <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="mt-4">
                         {% csrf_token %}
@@ -52,7 +83,11 @@
                                 <label for="quantity" class="form-label">Количество:</label>
                                 <input type="number" name="quantity" id="quantity" class="form-control" value="1" min="1" max="{{ product.available_quantity }}">
                             </div>
-                            <div class="col-6 d-flex align-items-end">
+                            <div class="col-6">
+                                <label for="days" class="form-label">Дней аренды:</label>
+                                <input type="number" name="days" id="days" class="form-control" value="{{ request.GET.days|default:1 }}" min="1" max="365">
+                            </div>
+                            <div class="col-12">
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="fas fa-cart-plus"></i> Добавить в корзину
                                 </button>
@@ -71,9 +106,79 @@
 
 <div class="row mt-4">
     <div class="col-12">
-        <a href="{% url 'rental:product_list' %}" class="btn btn-outline-secondary">
+        <a href="{% url 'rental:product_list' %}?days={{ request.GET.days|default:1 }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Вернуться к каталогу
         </a>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dailyPrice = {{ product.daily_price }};
+
+function updateCalculation() {
+    const quantity = parseInt(document.getElementById('calcQuantity').value) || 1;
+    const days = parseInt(document.getElementById('calcDays').value) || 1;
+    
+    // Обновляем отображение
+    document.getElementById('quantityDisplay').textContent = quantity;
+    document.getElementById('daysDisplay').textContent = days;
+    
+    // Рассчитываем базовую стоимость
+    const baseTotal = dailyPrice * quantity * days;
+    
+    // Рассчитываем скидку
+    let discount = 0;
+    let discountText = '';
+    
+    if (days >= 30) {
+        discount = 15;
+        discountText = 'Скидка 15% за аренду от 30 дней';
+    } else if (days >= 14) {
+        discount = 10;
+        discountText = 'Скидка 10% за аренду от 14 дней';
+    } else if (days >= 7) {
+        discount = 5;
+        discountText = 'Скидка 5% за аренду от 7 дней';
+    }
+    
+    const finalTotal = discount > 0 ? baseTotal * (1 - discount / 100) : baseTotal;
+    
+    // Обновляем отображение
+    document.getElementById('totalDisplay').textContent = baseTotal.toFixed(0) + ' ₽';
+    document.getElementById('calculatedTotal').textContent = finalTotal.toFixed(0) + ' ₽';
+    
+    // Показываем информацию о скидке
+    const discountInfo = document.getElementById('discountInfo');
+    const discountTextEl = document.getElementById('discountText');
+    
+    if (discount > 0) {
+        discountTextEl.textContent = discountText + ` (экономия: ${(baseTotal - finalTotal).toFixed(0)} ₽)`;
+        discountInfo.style.display = 'block';
+    } else {
+        discountInfo.style.display = 'none';
+    }
+    
+    // Синхронизируем с формой
+    document.getElementById('quantity').value = quantity;
+    document.getElementById('days').value = days;
+}
+
+// Синхронизируем изменения в форме с калькулятором
+document.getElementById('quantity').addEventListener('input', function() {
+    document.getElementById('calcQuantity').value = this.value;
+    updateCalculation();
+});
+
+document.getElementById('days').addEventListener('input', function() {
+    document.getElementById('calcDays').value = this.value;
+    updateCalculation();
+});
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    updateCalculation();
+});
+</script>
 {% endblock %}

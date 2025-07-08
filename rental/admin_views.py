@@ -101,7 +101,7 @@ def update_order_status(request, order_id):
 @user_passes_test(is_admin)
 def storage_management(request):
     storages = Storage.objects.all()
-    shelves = Shelf.objects.all()
+    shelves = Shelf.objects.all().select_related('storage')
     
     if request.method == 'POST':
         if 'add_storage' in request.POST:
@@ -117,6 +117,67 @@ def storage_management(request):
                 shelf_form.save()
                 messages.success(request, 'Полка добавлена')
                 return redirect('storage_management')
+        
+        elif 'edit_storage' in request.POST:
+            storage_id = request.POST.get('storage_id')
+            name = request.POST.get('name')
+            try:
+                storage = Storage.objects.get(id=storage_id)
+                storage.name = name
+                storage.save()
+                messages.success(request, f'Стойка "{name}" обновлена')
+            except Storage.DoesNotExist:
+                messages.error(request, 'Стойка не найдена')
+            return redirect('storage_management')
+        
+        elif 'edit_shelf' in request.POST:
+            shelf_id = request.POST.get('shelf_id')
+            storage_id = request.POST.get('storage_id')
+            number = request.POST.get('number')
+            try:
+                shelf = Shelf.objects.get(id=shelf_id)
+                storage = Storage.objects.get(id=storage_id)
+                shelf.storage = storage
+                shelf.number = number
+                shelf.save()
+                messages.success(request, f'Полка "{shelf}" обновлена')
+            except (Shelf.DoesNotExist, Storage.DoesNotExist):
+                messages.error(request, 'Полка или стойка не найдена')
+            return redirect('storage_management')
+        
+        elif 'delete_storage' in request.POST:
+            storage_id = request.POST.get('storage_id')
+            try:
+                storage = Storage.objects.get(id=storage_id)
+                storage_name = storage.name
+                
+                # Проверяем, есть ли полки в этой стойке
+                shelves_count = storage.shelf_set.count()
+                if shelves_count > 0:
+                    messages.error(request, f'Нельзя удалить стойку "{storage_name}": в ней есть {shelves_count} полок')
+                else:
+                    storage.delete()
+                    messages.success(request, f'Стойка "{storage_name}" удалена')
+            except Storage.DoesNotExist:
+                messages.error(request, 'Стойка не найдена')
+            return redirect('storage_management')
+        
+        elif 'delete_shelf' in request.POST:
+            shelf_id = request.POST.get('shelf_id')
+            try:
+                shelf = Shelf.objects.get(id=shelf_id)
+                shelf_name = str(shelf)
+                
+                # Проверяем, есть ли товары на этой полке
+                products_count = shelf.product_set.count()
+                if products_count > 0:
+                    messages.error(request, f'Нельзя удалить полку "{shelf_name}": на ней находится {products_count} товаров')
+                else:
+                    shelf.delete()
+                    messages.success(request, f'Полка "{shelf_name}" удалена')
+            except Shelf.DoesNotExist:
+                messages.error(request, 'Полка не найдена')
+            return redirect('storage_management')
     
     storage_form = StorageForm()
     shelf_form = ShelfForm()
@@ -277,3 +338,223 @@ def admin_create_order(request):
         'products': products,
     }
     return render(request, 'rental/admin/create_order.html', context)
+
+@user_passes_test(is_admin)
+def tag_management(request):
+    if request.method == 'POST':
+        if 'add_tag' in request.POST:
+            name = request.POST.get('name')
+            parent_id = request.POST.get('parent')
+            
+            if name:
+                parent = None
+                if parent_id:
+                    try:
+                        parent = Tag.objects.get(id=parent_id)
+                    except Tag.DoesNotExist:
+                        pass
+                
+                Tag.objects.create(name=name, parent=parent)
+                messages.success(request, f'Тег "{name}" успешно добавлен')
+                return redirect('tag_management')
+        
+        elif 'edit_tag' in request.POST:
+            tag_id = request.POST.get('tag_id')
+            name = request.POST.get('name')
+            parent_id = request.POST.get('parent')
+            
+            try:
+                tag = Tag.objects.get(id=tag_id)
+                tag.name = name
+                
+                # Проверяем, что родительский тег не является потомком текущего тега
+                if parent_id:
+                    parent = Tag.objects.get(id=parent_id)
+                    if not tag.is_ancestor_of(parent) and parent.id != tag.id:
+                        tag.parent = parent
+                    else:
+                        messages.error(request, 'Нельзя сделать потомка родителем его предка')
+                        return redirect('tag_management')
+                else:
+                    tag.parent = None
+                
+                tag.save()
+                messages.success(request, f'Тег "{name}" успешно обновлен')
+            except Tag.DoesNotExist:
+                messages.error(request, 'Тег не найден')
+            except Exception as e:
+                messages.error(request, f'Ошибка при обновлении тега: {e}')
+            
+            return redirect('tag_management')
+        
+        elif 'delete_tag' in request.POST:
+            tag_id = request.POST.get('tag_id')
+            try:
+                tag = Tag.objects.get(id=tag_id)
+                tag_name = tag.name
+                
+                # Проверяем, есть ли товары с этим тегом
+                products_count = tag.product_set.count()
+                children_count = tag.tag_set.count()
+                
+                if products_count > 0:
+                    messages.error(request, f'Нельзя удалить тег "{tag_name}": используется в {products_count} товарах')
+                elif children_count > 0:
+                    messages.error(request, f'Нельзя удалить тег "{tag_name}": у него есть {children_count} дочерних тегов')
+                else:
+                    tag.delete()
+                    messages.success(request, f'Тег "{tag_name}" успешно удален')
+            except Tag.DoesNotExist:
+                messages.error(request, 'Тег не найден')
+            
+            return redirect('tag_management')
+    
+    # Получаем все теги и сортируем их вручную
+    all_tags = Tag.objects.all()
+    
+    # Группируем теги по уровням для отображения
+    root_tags = all_tags.filter(parent=None).order_by('name')
+    tag_tree = []
+    
+    def build_tree(parent_tags, level=0):
+        tree = []
+        for tag in parent_tags.order_by('name'):
+            tree.append({
+                'tag': tag,
+                'level': level,
+                'products_count': tag.product_set.count(),
+                'children_count': tag.tag_set.count()
+            })
+            children = all_tags.filter(parent=tag)
+            if children:
+                tree.extend(build_tree(children, level + 1))
+        return tree
+    
+    tag_tree = build_tree(root_tags)
+    
+    context = {
+        'tags': all_tags.order_by('name'),
+        'tag_tree': tag_tree,
+        'root_tags': root_tags,
+    }
+    return render(request, 'rental/admin/tag_management.html', context)
+
+@user_passes_test(is_admin)
+def get_tag_children(request):
+    """API endpoint для получения дочерних тегов"""
+    parent_id = request.GET.get('parent_id')
+    
+    if parent_id:
+        try:
+            parent = Tag.objects.get(id=parent_id)
+            children = parent.tag_set.all().order_by('name').values('id', 'name')
+            return JsonResponse({
+                'success': True,
+                'children': list(children)
+            })
+        except Tag.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Родительский тег не найден'})
+    else:
+        # Возвращаем корневые теги
+        root_tags = Tag.objects.filter(parent=None).order_by('name').values('id', 'name')
+        return JsonResponse({
+            'success': True,
+            'children': list(root_tags)
+        })
+
+@user_passes_test(is_admin)
+def tag_structure_api(request):
+    """API для получения структуры тегов в JSON формате"""
+    def build_json_tree(parent=None):
+        tags = Tag.objects.filter(parent=parent).order_by('name')
+        tree = []
+        for tag in tags:
+            children = build_json_tree(tag)
+            tree.append({
+                'id': tag.id,
+                'name': tag.name,
+                'products_count': tag.product_set.count(),
+                'children': children
+            })
+        return tree
+    
+    tree = build_json_tree()
+    return JsonResponse({'tree': tree})
+
+@user_passes_test(is_admin)
+def edit_storage(request, storage_id):
+    storage = get_object_or_404(Storage, id=storage_id)
+    
+    if request.method == 'POST':
+        form = StorageForm(request.POST, instance=storage)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Стойка "{storage.name}" обновлена')
+            return redirect('storage_management')
+    else:
+        form = StorageForm(instance=storage)
+    
+    context = {
+        'form': form,
+        'storage': storage,
+    }
+    return render(request, 'rental/admin/edit_storage.html', context)
+
+@user_passes_test(is_admin)
+def edit_shelf(request, shelf_id):
+    shelf = get_object_or_404(Shelf, id=shelf_id)
+    
+    if request.method == 'POST':
+        form = ShelfForm(request.POST, instance=shelf)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Полка "{shelf}" обновлена')
+            return redirect('storage_management')
+    else:
+        form = ShelfForm(instance=shelf)
+    
+    context = {
+        'form': form,
+        'shelf': shelf,
+    }
+    return render(request, 'rental/admin/edit_shelf.html', context)
+
+@user_passes_test(is_admin)
+def delete_storage(request, storage_id):
+    storage = get_object_or_404(Storage, id=storage_id)
+    
+    if request.method == 'POST':
+        shelves_count = storage.shelf_set.count()
+        if shelves_count > 0:
+            messages.error(request, f'Нельзя удалить стойку "{storage.name}": в ней есть {shelves_count} полок')
+        else:
+            storage_name = storage.name
+            storage.delete()
+            messages.success(request, f'Стойка "{storage_name}" удалена')
+        return redirect('storage_management')
+    
+    context = {
+        'storage': storage,
+        'shelves_count': storage.shelf_set.count(),
+    }
+    return render(request, 'rental/admin/confirm_delete_storage.html', context)
+
+@user_passes_test(is_admin)
+def delete_shelf(request, shelf_id):
+    shelf = get_object_or_404(Shelf, id=shelf_id)
+    
+    if request.method == 'POST':
+        products_count = shelf.product_set.count()
+        if products_count > 0:
+            messages.error(request, f'Нельзя удалить полку "{shelf}": на ней находится {products_count} товаров')
+        else:
+            shelf_name = str(shelf)
+            shelf.delete()
+            messages.success(request, f'Полка "{shelf_name}" удалена')
+        return redirect('storage_management')
+    
+    context = {
+        'shelf': shelf,
+        'products_count': shelf.product_set.count(),
+    }
+    return render(request, 'rental/admin/confirm_delete_shelf.html', context)

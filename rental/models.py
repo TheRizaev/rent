@@ -28,11 +28,72 @@ class Tag(models.Model):
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, verbose_name='Родительский тег')
     
     def __str__(self):
+        if self.parent:
+            return f"{self.parent} → {self.name}"
         return self.name
+    
+    def get_full_path(self):
+        """Возвращает полный путь тега (Родитель → Дочерний → Внук)"""
+        path = []
+        current = self
+        while current:
+            path.insert(0, current.name)
+            current = current.parent
+        return ' → '.join(path)
+    
+    def get_level(self):
+        """Возвращает уровень вложенности тега"""
+        level = 0
+        current = self.parent
+        while current:
+            level += 1
+            current = current.parent
+        return level
+    
+    def get_children(self):
+        """Возвращает прямых потомков"""
+        return Tag.objects.filter(parent=self)
+    
+    def get_descendants(self):
+        """Возвращает всех потомков (включая потомков потомков)"""
+        descendants = []
+        for child in self.get_children():
+            descendants.append(child)
+            descendants.extend(child.get_descendants())
+        return descendants
+    
+    def get_ancestors(self):
+        """Возвращает всех предков"""
+        ancestors = []
+        current = self.parent
+        while current:
+            ancestors.append(current)
+            current = current.parent
+        return ancestors
+    
+    def is_ancestor_of(self, tag):
+        """Проверяет, является ли текущий тег предком другого тега"""
+        return self in tag.get_ancestors()
+    
+    def is_descendant_of(self, tag):
+        """Проверяет, является ли текущий тег потомком другого тега"""
+        return tag in self.get_ancestors()
+    
+    def get_root(self):
+        """Возвращает корневой тег"""
+        current = self
+        while current.parent:
+            current = current.parent
+        return current
+    
+    def is_leaf(self):
+        """Проверяет, является ли тег листом (нет потомков)"""
+        return not self.get_children().exists()
     
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
+        ordering = ['name']
 
 class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')

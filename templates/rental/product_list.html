@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load rental_filters %}
 
 {% block title %}Каталог товаров - Аренда оборудования{% endblock %}
 
@@ -7,10 +8,13 @@
     <div class="col-12">
         <div class="search-form">
             <form method="get" class="row g-3">
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <input type="text" name="search" class="form-control" placeholder="Поиск товаров..." value="{{ search_query }}">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <input type="number" name="days" class="form-control" placeholder="Количество дней" value="{{ request.GET.days|default:1 }}" min="1" max="30" id="daysFilter">
+                </div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-search"></i> Найти
                     </button>
@@ -18,12 +22,18 @@
             </form>
             
             <div class="filter-tags">
-                <a href="?" class="btn tag-btn {% if not selected_tag %}active{% endif %}">Все товары</a>
+                <a href="?days={{ request.GET.days|default:1 }}" class="btn tag-btn {% if not selected_tag %}active{% endif %}">Все товары</a>
                 {% for tag in tags %}
-                    <a href="?tag={{ tag.id }}" class="btn tag-btn {% if selected_tag == tag.id|stringformat:'s' %}active{% endif %}">
+                    <a href="?tag={{ tag.id }}&days={{ request.GET.days|default:1 }}" class="btn tag-btn {% if selected_tag == tag.id|stringformat:'s' %}active{% endif %}">
                         {{ tag.name }}
                     </a>
                 {% endfor %}
+            </div>
+            
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i> 
+                Цены указаны за <strong id="selectedDays">{{ request.GET.days|default:1 }}</strong> 
+                день{{ request.GET.days|default:1|pluralize:",,ей" }} аренды
             </div>
         </div>
     </div>
@@ -48,17 +58,26 @@
                 {% endif %}
                 <div class="mt-auto">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span>
+                        <div>
+                            <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span><br>
+                            {% with days=request.GET.days|default:1 %}
+                                <small class="text-primary">
+                                    {{ product.daily_price|floatformat:0 }} × {{ days }} = 
+                                    <strong>{{ product.daily_price|mul:days|floatformat:0 }} ₽</strong>
+                                </small>
+                            {% endwith %}
+                        </div>
                         <span class="badge bg-secondary">{{ product.available_quantity }} шт.</span>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="{% url 'rental:product_detail' product.id %}" class="btn btn-outline-primary flex-grow-1">
+                        <a href="{% url 'rental:product_detail' product.id %}?days={{ request.GET.days|default:1 }}" class="btn btn-outline-primary flex-grow-1">
                             Подробнее
                         </a>
                         {% if product.available_quantity > 0 %}
                             <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="d-inline">
                                 {% csrf_token %}
                                 <input type="hidden" name="quantity" value="1">
+                                <input type="hidden" name="days" value="{{ request.GET.days|default:1 }}">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-cart-plus"></i>
                                 </button>
@@ -79,4 +98,44 @@
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Создаем фильтр для умножения
+function mul(a, b) {
+    return parseFloat(a || 0) * parseFloat(b || 0);
+}
+
+// Обновляем цены при изменении количества дней
+document.getElementById('daysFilter').addEventListener('input', function() {
+    const days = parseInt(this.value) || 1;
+    document.getElementById('selectedDays').textContent = days;
+    
+    // Обновляем все цены на странице
+    document.querySelectorAll('.card-body').forEach(function(cardBody) {
+        const pricePerDay = parseFloat(cardBody.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+        const totalPrice = pricePerDay * days;
+        const priceSmall = cardBody.querySelector('.text-primary small');
+        if (priceSmall) {
+            priceSmall.innerHTML = `${pricePerDay} × ${days} = <strong>${totalPrice.toFixed(0)} ₽</strong>`;
+        }
+    });
+    
+    // Обновляем скрытые поля в формах
+    document.querySelectorAll('input[name="days"]').forEach(function(input) {
+        input.value = days;
+    });
+});
+
+// Обновляем ссылки на детальные страницы
+document.getElementById('daysFilter').addEventListener('input', function() {
+    const days = this.value;
+    document.querySelectorAll('a[href*="product_detail"]').forEach(function(link) {
+        const url = new URL(link.href);
+        url.searchParams.set('days', days);
+        link.href = url.toString();
+    });
+});
+</script>
 {% endblock %}

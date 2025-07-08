@@ -56,8 +56,25 @@ class StorageForm(forms.ModelForm):
         model = Storage
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: A, B, C'})
+            'name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Например: A, B, C',
+                'maxlength': '10'
+            })
         }
+    
+    def clean_name(self):
+        name = self.cleaned_data['name'].strip().upper()
+        
+        # Проверяем уникальность только если это новая стойка или имя изменилось
+        if self.instance.pk:
+            if Storage.objects.filter(name=name).exclude(pk=self.instance.pk).exists():
+                raise forms.ValidationError(f'Стойка с названием "{name}" уже существует')
+        else:
+            if Storage.objects.filter(name=name).exists():
+                raise forms.ValidationError(f'Стойка с названием "{name}" уже существует')
+        
+        return name
 
 class ShelfForm(forms.ModelForm):
     class Meta:
@@ -65,5 +82,29 @@ class ShelfForm(forms.ModelForm):
         fields = ['storage', 'number']
         widgets = {
             'storage': forms.Select(attrs={'class': 'form-control'}),
-            'number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: 1, 2, 3'})
+            'number': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Например: 1, 2, 3',
+                'maxlength': '10'
+            })
         }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        storage = cleaned_data.get('storage')
+        number = cleaned_data.get('number')
+        
+        if storage and number:
+            number = number.strip()
+            
+            # Проверяем уникальность комбинации стойка+номер
+            if self.instance.pk:
+                if Shelf.objects.filter(storage=storage, number=number).exclude(pk=self.instance.pk).exists():
+                    raise forms.ValidationError(f'Полка "{number}" уже существует в стойке "{storage.name}"')
+            else:
+                if Shelf.objects.filter(storage=storage, number=number).exists():
+                    raise forms.ValidationError(f'Полка "{number}" уже существует в стойке "{storage.name}"')
+            
+            cleaned_data['number'] = number
+        
+        return cleaned_data

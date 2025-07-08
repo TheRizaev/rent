@@ -56,7 +56,7 @@
                         <td>{{ order.contact_person }}</td>
                         <td>{{ order.phone1 }}</td>
                         <td>{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</td>
-                        <td>{{ order.total_amount }} ₽</td>
+                        <td>{{ order.total_amount }} сум</td>
                         <td>
                             <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}">
                                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>

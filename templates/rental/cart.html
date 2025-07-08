@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load rental_filters %}
 
 {% block title %}Корзина - Аренда оборудования{% endblock %}
 
@@ -26,17 +27,36 @@
                                 <p class="card-text">
                                     <small class="text-muted">Арт. {{ item.product.article }}</small>
                                 </p>
-                                <p class="card-text">
-                                    <strong>Цена:</strong> {{ item.product.daily_price }} ₽/день<br>
-                                    <strong>Количество:</strong> {{ item.quantity }} шт.<br>
-                                    <strong>Сумма:</strong> {{ item.total }} ₽
-                                </p>
-                                <form method="post" action="{% url 'rental:remove_from_cart' item.product.id %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="fas fa-trash"></i> Удалить
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="card-text">
+                                            <strong>Цена:</strong> {{ item.product.daily_price }} ₽/день<br>
+                                            <strong>Количество:</strong> {{ item.quantity }} шт.<br>
+                                            <strong>Дней в аренде:</strong> <span class="days-display">{{ item.days|default:1 }}</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="price-breakdown">
+                                            <div class="small text-muted">
+                                                {{ item.product.daily_price }} ₽ × {{ item.quantity }} шт. × <span class="days-calc">{{ item.days|default:1 }}</span> дн.
+                                            </div>
+                                            <div class="h5 text-success item-total" data-price="{{ item.product.daily_price }}" data-quantity="{{ item.quantity }}" data-days="{{ item.days|default:1 }}">
+                                                {{ item.product.daily_price|mul:item.quantity|mul:item.days|default:item.product.daily_price|mul:item.quantity|floatformat:0 }} ₽
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <form method="post" action="{% url 'rental:remove_from_cart' item.product.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </form>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="editQuantity({{ item.product.id }}, {{ item.quantity }}, {{ item.product.available_quantity }})">
+                                        <i class="fas fa-edit"></i> Изменить количество
                                     </button>
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -45,11 +65,47 @@
         </div>
         <div class="col-lg-4">
             <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calculator"></i> Калькулятор аренды</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Итого</h5>
-                    <p class="h4 text-success">{{ total }} ₽</p>
+                    <div class="mb-3">
+                        <label for="rentalDays" class="form-label">Количество дней аренды:</label>
+                        <input type="number" class="form-control" id="rentalDays" value="1" min="1" max="365" onchange="updatePrices()">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Период аренды:</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="date" class="form-control" id="startDate" onchange="calculateDays()">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" id="endDate" onchange="calculateDays()">
+                            </div>
+                        </div>
+                    </div>
+                    
                     <hr>
-                    <a href="{% url 'rental:checkout' %}" class="btn btn-primary w-100">
+                    
+                    <div class="price-summary">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Стоимость за день:</span>
+                            <span id="dailyTotal" class="fw-bold">{{ total }} ₽</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Количество дней:</span>
+                            <span id="daysCount" class="fw-bold">1</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Итого к оплате:</strong>
+                            <strong id="finalTotal" class="text-success h4">{{ total }} ₽</strong>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <a href="{% url 'rental:checkout' %}" class="btn btn-primary w-100" id="checkoutBtn">
                         <i class="fas fa-credit-card"></i> Оформить заявку
                     </a>
                     <a href="{% url 'rental:product_list' %}" class="btn btn-outline-secondary w-100 mt-2">
@@ -69,4 +125,145 @@
         </a>
     </div>
 {% endif %}
+
+<!-- Модальное окно изменения количества -->
+<div class="modal fade" id="editQuantityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Изменить количество</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editQuantityForm" method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="editProductId" name="product_id">
+                    <div class="mb-3">
+                        <label for="newQuantity" class="form-label">Новое количество:</label>
+                        <input type="number" class="form-control" id="newQuantity" name="quantity" min="1" required>
+                        <small class="text-muted">Доступно: <span id="availableQuantity"></span> шт.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Обновить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let dailyTotal = {{ total }};
+
+function updatePrices() {
+    const days = parseInt(document.getElementById('rentalDays').value) || 1;
+    
+    // Обновляем количество дней в отображении
+    document.getElementById('daysCount').textContent = days;
+    document.querySelectorAll('.days-display').forEach(el => el.textContent = days);
+    document.querySelectorAll('.days-calc').forEach(el => el.textContent = days);
+    
+    // Обновляем цены для каждого товара
+    document.querySelectorAll('.item-total').forEach(function(element) {
+        const price = parseFloat(element.dataset.price);
+        const quantity = parseInt(element.dataset.quantity);
+        const total = price * quantity * days;
+        element.textContent = total.toFixed(0) + ' ₽';
+    });
+    
+    // Рассчитываем общую сумму с учетом скидок
+    const baseTotal = dailyTotal * days;
+    let finalTotal = baseTotal;
+    let discount = 0;
+    
+    if (days >= 30) {
+        discount = 15;
+    } else if (days >= 14) {
+        discount = 10;
+    } else if (days >= 7) {
+        discount = 5;
+    }
+    
+    if (discount > 0) {
+        finalTotal = baseTotal * (1 - discount / 100);
+    }
+    
+    document.getElementById('finalTotal').textContent = finalTotal.toFixed(0) + ' ₽';
+    
+    // Показываем скидку если она есть
+    const discountInfo = document.querySelector('.alert-info');
+    if (discount > 0) {
+        discountInfo.innerHTML = `
+            <small>
+                <i class="fas fa-percent"></i>
+                Применена скидка ${discount}%!<br>
+                Экономия: ${(baseTotal - finalTotal).toFixed(0)} ₽
+            </small>
+        `;
+        discountInfo.className = 'alert alert-success';
+    } else {
+        discountInfo.innerHTML = `
+            <small>
+                <i class="fas fa-info-circle"></i>
+                При аренде от 7 дней - скидка 5%<br>
+                При аренде от 14 дней - скидка 10%<br>
+                При аренде от 30 дней - скидка 15%
+            </small>
+        `;
+        discountInfo.className = 'alert alert-info';
+    }
+    
+    // Обновляем ссылку на оформление заказа
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const url = new URL(checkoutBtn.href, window.location.origin);
+    url.searchParams.set('days', days);
+    checkoutBtn.href = url.toString();
+}
+
+function calculateDays() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 чтобы включить первый день
+        
+        if (diffDays > 0) {
+            document.getElementById('rentalDays').value = diffDays;
+            updatePrices();
+        }
+    }
+}
+
+function editQuantity(productId, currentQuantity, availableQuantity) {
+    document.getElementById('editProductId').value = productId;
+    document.getElementById('newQuantity').value = currentQuantity;
+    document.getElementById('newQuantity').max = availableQuantity;
+    document.getElementById('availableQuantity').textContent = availableQuantity;
+    
+    // Устанавливаем действие формы
+    document.getElementById('editQuantityForm').action = `/update-cart-quantity/`;
+    
+    new bootstrap.Modal(document.getElementById('editQuantityModal')).show();
+}
+
+// Устанавливаем сегодняшнюю дату как минимальную
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').min = today;
+    document.getElementById('startDate').value = today;
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('endDate').min = tomorrow.toISOString().split('T')[0];
+    document.getElementById('endDate').value = tomorrow.toISOString().split('T')[0];
+    
+    updatePrices();
+});
+</script>
 {% endblock %}

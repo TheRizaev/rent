@@ -64,7 +64,7 @@
                 <div class="row">
                     <div class="col">
                         <h5 class="card-title text-uppercase text-muted mb-0">Выручка</h5>
-                        <span class="h2 font-weight-bold mb-0">{{ total_revenue }} ₽</span>
+                        <span class="h2 font-weight-bold mb-0">{{ total_revenue }} сум</span>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-ruble-sign fa-2x"></i>
@@ -101,7 +101,7 @@
                                 <td>#{{ order.id }}</td>
                                 <td>{{ order.contact_person }}</td>
                                 <td>{{ order.phone1 }}</td>
-                                <td>{{ order.total_amount }} ₽</td>
+                                <td>{{ order.total_amount }} сум</td>
                                 <td>
                                     {% if order.status == 'pending' %}
                                         <span class="badge bg-warning">Ожидает</span>

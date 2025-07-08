@@ -1,18 +1,13 @@
 {% extends 'rental/admin/base_admin.html' %}
 
-{% block title %}Заявка #{{ order.id }} - Админ панель{% endblock %}
+{% block title %}Создать заявку - Админ панель{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-    <h1 class="h2">Заявка #{{ order.id }}</h1>
-    <div>
-        <a href="{% url 'rental:download_order_pdf' order.id %}" class="btn btn-outline-primary">
-            <i class="fas fa-download"></i> Скачать PDF
-        </a>
-        <a href="{% url 'admin_orders' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Назад к списку
-        </a>
-    </div>
+    <h1 class="h2">Создать заявку</h1>
+    <a href="{% url 'admin_orders' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> К списку заявок
+    </a>
 </div>
 
 <div class="row">
@@ -22,144 +17,135 @@
                 <h5>Информация о заявке</h5>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Контактное лицо:</strong></div>
-                    <div class="col-sm-9">{{ order.contact_person }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Основной телефон:</strong></div>
-                    <div class="col-sm-9">{{ order.phone1 }}</div>
-                </div>
-                {% if order.phone2 %}
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Дополнительный телефон:</strong></div>
-                    <div class="col-sm-9">{{ order.phone2 }}</div>
-                </div>
-                {% endif %}
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Период аренды:</strong></div>
-                    <div class="col-sm-9">{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Дата создания:</strong></div>
-                    <div class="col-sm-9">{{ order.created_at|date:"d.m.Y H:i" }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Создана админом:</strong></div>
-                    <div class="col-sm-9">
-                        {% if order.created_by_admin %}
-                            <span class="badge bg-info">Да</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Нет</span>
-                        {% endif %}
+                <form id="orderForm" method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.contact_person.id_for_label }}" class="form-label">Контактное лицо</label>
+                            {{ form.contact_person }}
+                            {% if form.contact_person.errors %}
+                                <div class="text-danger">{{ form.contact_person.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone1.id_for_label }}" class="form-label">Основной телефон</label>
+                            {{ form.phone1 }}
+                            {% if form.phone1.errors %}
+                                <div class="text-danger">{{ form.phone1.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.phone2.id_for_label }}" class="form-label">Дополнительный телефон</label>
+                            {{ form.phone2 }}
+                            {% if form.phone2.errors %}
+                                <div class="text-danger">{{ form.phone2.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6"></div>
+                        <div class="col-md-6">
+                            <label for="{{ form.rental_start.id_for_label }}" class="form-label">Начало аренды</label>
+                            {{ form.rental_start }}
+                            {% if form.rental_start.errors %}
+                                <div class="text-danger">{{ form.rental_start.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.rental_end.id_for_label }}" class="form-label">Конец аренды</label>
+                            {{ form.rental_end }}
+                            {% if form.rental_end.errors %}
+                                <div class="text-danger">{{ form.rental_end.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ form.comment.id_for_label }}" class="form-label">Комментарий</label>
+                            {{ form.comment }}
+                            {% if form.comment.errors %}
+                                <div class="text-danger">{{ form.comment.errors }}</div>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                {% if order.comment %}
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Комментарий:</strong></div>
-                    <div class="col-sm-9">{{ order.comment }}</div>
-                </div>
-                {% endif %}
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Общая сумма:</strong></div>
-                    <div class="col-sm-9"><span class="h5 text-success">{{ order.total_amount }} ₽</span></div>
-                </div>
+                    <input type="hidden" name="cart_data" id="cartData">
+                </form>
             </div>
         </div>
-
-        <div class="card mt-4">
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
             <div class="card-header">
                 <h5>Товары в заявке</h5>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
+                <div id="cartItems"></div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Итого:</strong>
+                    <strong id="totalAmount">0 сум</strong>
+                </div>
+                <button type="button" class="btn btn-primary w-100 mt-3" onclick="submitOrder()" id="submitBtn" disabled>
+                    <i class="fas fa-check"></i> Создать заявку
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Добавить товары</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" id="productSearch" class="form-control" placeholder="Поиск товаров по названию или артикулу...">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100" onclick="searchProducts()">
+                            <i class="fas fa-search"></i> Поиск
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive mt-3">
+                    <table class="table table-striped">
                         <thead>
                             <tr>
                                 <th>Товар</th>
                                 <th>Артикул</th>
-                                <th>Количество</th>
-                                <th>Цена за день</th>
-                                <th>Сумма</th>
-                                <th>Место хранения</th>
+                                <th>Доступно</th>
+                                <th>Цена/день</th>
+                                <th>Действие</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for item in order.items.all %}
-                            <tr>
+                        <tbody id="productsTable">
+                            {% for product in products %}
+                            <tr data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" data-product-price="{{ product.daily_price }}" data-available="{{ product.available_quantity }}">
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        {% if item.product.photo %}
-                                            <img src="{{ item.product.photo.url }}" alt="{{ item.product.name }}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
+                                        {% if product.photo %}
+                                            <img src="{{ product.photo.url }}" alt="{{ product.name }}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
                                         {% endif %}
-                                        <strong>{{ item.product.name }}</strong>
+                                        <strong>{{ product.name }}</strong>
                                     </div>
                                 </td>
-                                <td><code>{{ item.product.article }}</code></td>
-                                <td>{{ item.quantity }} шт.</td>
-                                <td>{{ item.price }} ₽</td>
-                                <td><strong>{{ item.price|floatformat:2 }} ₽</strong></td>
-                                <td><span class="badge bg-info">{{ item.product.shelf }}</span></td>
+                                <td><code>{{ product.article }}</code></td>
+                                <td><span class="badge bg-success">{{ product.available_quantity }}</span></td>
+                                <td>{{ product.daily_price }} сум</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <input type="number" class="form-control form-control-sm me-2" style="width: 70px;" value="1" min="1" max="{{ product.available_quantity }}" id="qty-{{ product.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addToCart({{ product.id }})">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
-                        <tfoot>
-                            <tr class="table-active">
-                                <td colspan="4"><strong>Итого:</strong></td>
-                                <td><strong class="text-success">{{ order.total_amount }} ₽</strong></td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>Управление статусами</h5>
-            </div>
-            <div class="card-body">
-                <form id="statusForm">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Статус заявки</label>
-                        <select name="status" class="form-select" id="orderStatus">
-                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
-                            <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                            <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
-                            <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Статус оплаты</label>
-                        <select name="payment_status" class="form-select" id="paymentStatus">
-                            <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
-                            <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
-                        </select>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-save"></i> Сохранить изменения
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5>Статус товаров</h5>
-            </div>
-            <div class="card-body">
-                {% for item in order.items.all %}
-                <div class="mb-2">
-                    <strong>{{ item.product.name }}</strong><br>
-                    <small class="text-muted">Доступно сейчас: {{ item.product.available_quantity }} шт.</small>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </div>
@@ -168,37 +154,121 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('statusForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+let cart = [];
+
+function addToCart(productId) {
+    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+    const productName = row.dataset.productName;
+    const productPrice = parseFloat(row.dataset.productPrice);
+    const available = parseInt(row.dataset.available);
+    const quantity = parseInt(document.getElementById(`qty-${productId}`).value);
     
-    const formData = new FormData(this);
+    if (quantity > available) {
+        alert('Недостаточно товара на складе');
+        return;
+    }
     
-    fetch(`{% url 'update_order_status' order.id %}`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Показать уведомление об успехе
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-success alert-dismissible fade show';
-            alert.innerHTML = 'Статус успешно обновлен <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
-            
-            // Обновить страницу через 2 секунды
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
+    // Проверяем, есть ли уже этот товар в корзине
+    const existingItem = cart.find(item => item.product_id === productId);
+    if (existingItem) {
+        if (existingItem.quantity + quantity > available) {
+            alert('Недостаточно товара на складе');
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        const alert = document.createElement('div');
-        alert.className = 'alert alert-danger alert-dismissible fade show';
-        alert.innerHTML = 'Ошибка при обновлении статуса <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-        document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+        existingItem.quantity += quantity;
+    } else {
+        cart.push({
+            product_id: productId,
+            name: productName,
+            price: productPrice,
+            quantity: quantity
+        });
+    }
+    
+    updateCartDisplay();
+}
+
+function removeFromCart(productId) {
+    cart = cart.filter(item => item.product_id !== productId);
+    updateCartDisplay();
+}
+
+function updateCartDisplay() {
+    const cartItems = document.getElementById('cartItems');
+    const totalAmount = document.getElementById('totalAmount');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<p class="text-muted">Корзина пуста</p>';
+        totalAmount.textContent = '0 сум';
+        submitBtn.disabled = true;
+        return;
+    }
+    
+    let html = '';
+    let total = 0;
+    
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <strong>${item.name}</strong><br>
+                    <small>${item.quantity} x ${item.price} сум</small>
+                </div>
+                <div>
+                    <strong>${itemTotal} сум</strong>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(${item.product_id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
     });
+    
+    cartItems.innerHTML = html;
+    totalAmount.textContent = `${total} сум`;
+    submitBtn.disabled = false;
+    
+    // Обновляем скрытое поле с данными корзины
+    document.getElementById('cartData').value = JSON.stringify(cart);
+}
+
+function submitOrder() {
+    if (cart.length === 0) {
+        alert('Добавьте товары в корзину');
+        return;
+    }
+    
+    document.getElementById('orderForm').submit();
+}
+
+function searchProducts() {
+    const query = document.getElementById('productSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#productsTable tr');
+    
+    rows.forEach(row => {
+        const productName = row.dataset.productName?.toLowerCase() || '';
+        const article = row.querySelector('code')?.textContent.toLowerCase() || '';
+        
+        if (productName.includes(query) || article.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Поиск по Enter
+document.getElementById('productSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchProducts();
+    }
 });
+
+// Инициализация
+updateCartDisplay();
 </script>
 {% endblock %}

@@ -62,7 +62,7 @@
                 {% endif %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Общая сумма:</strong></div>
-                    <div class="col-sm-9"><span class="h5 text-success">{{ order.total_amount }} ₽</span></div>
+                    <div class="col-sm-9"><span class="h5 text-success">{{ order.total_amount }} сум</span></div>
                 </div>
             </div>
         </div>
@@ -97,8 +97,8 @@
                                 </td>
                                 <td><code>{{ item.product.article }}</code></td>
                                 <td>{{ item.quantity }} шт.</td>
-                                <td>{{ item.price }} ₽</td>
-                                <td><strong>{{ item.price|floatformat:2 }} ₽</strong></td>
+                                <td>{{ item.price }} сум</td>
+                                <td><strong>{{ item.price|floatformat:2 }} сум</strong></td>
                                 <td><span class="badge bg-info">{{ item.product.shelf }}</span></td>
                             </tr>
                             {% endfor %}
@@ -106,7 +106,7 @@
                         <tfoot>
                             <tr class="table-active">
                                 <td colspan="4"><strong>Итого:</strong></td>
-                                <td><strong class="text-success">{{ order.total_amount }} ₽</strong></td>
+                                <td><strong class="text-success">{{ order.total_amount }} сум</strong></td>
                                 <td></td>
                             </tr>
                         </tfoot>

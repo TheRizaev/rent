@@ -49,18 +49,55 @@ def cart_view(request):
     cart_items = []
     total = 0
     
-    for product_id, quantity in cart.items():
+    for product_id, item_data in cart.items():
         try:
             product = Product.objects.get(id=product_id)
-            item_total = product.daily_price * quantity
+            
+            # Поддержка разных форматов корзины
+            if isinstance(item_data, int):
+                # Старый формат - только количество
+                quantity = item_data
+                days = 1
+            elif isinstance(item_data, dict):
+                # Новый формат - словарь с quantity и days
+                quantity = item_data.get('quantity', 1)
+                days = item_data.get('days', 1)
+            else:
+                # Неизвестный формат, пропускаем
+                continue
+            
+            # Рассчитываем стоимость для одного дня (для отображения базовой цены)
+            daily_total = product.daily_price * quantity
+            # Полная стоимость с учетом дней
+            item_total = daily_total * days
+            
             cart_items.append({
                 'product': product,
                 'quantity': quantity,
+                'days': days,
+                'daily_total': daily_total,
                 'total': item_total
             })
-            total += item_total
+            
+            # В total храним стоимость за день для совместимости
+            total += daily_total
+            
+        except Product.DoesNotExist:
+            # Удаляем несуществующие товары из корзины
+            pass
+    
+    # Очищаем корзину от несуществующих товаров
+    valid_cart = {}
+    for product_id, item_data in cart.items():
+        try:
+            Product.objects.get(id=product_id)
+            valid_cart[product_id] = item_data
         except Product.DoesNotExist:
             pass
+    
+    if len(valid_cart) != len(cart):
+        request.session['cart'] = valid_cart
+        request.session.modified = True
     
     context = {
         'cart_items': cart_items,
@@ -73,21 +110,46 @@ def add_to_cart(request, product_id):
     
     if request.method == 'POST':
         quantity = int(request.POST.get('quantity', 1))
+        days = int(request.POST.get('days', 1))
         
         if quantity > product.available_quantity:
             messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}')
             return redirect('rental:product_detail', product_id=product_id)
         
         cart = request.session.get('cart', {})
-        current_quantity = cart.get(str(product_id), 0)
         
+        # Получаем текущий элемент из корзины
+        current_item = cart.get(str(product_id))
+        
+        # Проверяем формат данных в корзине
+        if current_item is None:
+            # Товара нет в корзине
+            current_quantity = 0
+        elif isinstance(current_item, int):
+            # Старый формат - только количество
+            current_quantity = current_item
+        elif isinstance(current_item, dict):
+            # Новый формат - словарь с quantity и days
+            current_quantity = current_item.get('quantity', 0)
+        else:
+            # Неизвестный формат
+            current_quantity = 0
+        
+        # Проверяем, не превышает ли общее количество доступное
         if current_quantity + quantity > product.available_quantity:
-            messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}')
+            messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}, уже в корзине: {current_quantity}')
             return redirect('rental:product_detail', product_id=product_id)
         
-        cart[str(product_id)] = current_quantity + quantity
+        # Сохраняем в новом формате
+        cart[str(product_id)] = {
+            'quantity': current_quantity + quantity,
+            'days': days
+        }
+        
         request.session['cart'] = cart
-        messages.success(request, f'{product.name} добавлен в корзину')
+        request.session.modified = True
+        
+        messages.success(request, f'{product.name} добавлен в корзину на {days} дней')
         
         return redirect('rental:cart')
     
@@ -95,9 +157,22 @@ def add_to_cart(request, product_id):
 
 def remove_from_cart(request, product_id):
     cart = request.session.get('cart', {})
-    cart.pop(str(product_id), None)
-    request.session['cart'] = cart
-    messages.success(request, 'Товар удален из корзины')
+    
+    if str(product_id) in cart:
+        try:
+            product = Product.objects.get(id=product_id)
+            cart.pop(str(product_id), None)
+            request.session['cart'] = cart
+            request.session.modified = True
+            messages.success(request, f'{product.name} удален из корзины')
+        except Product.DoesNotExist:
+            cart.pop(str(product_id), None)
+            request.session['cart'] = cart
+            request.session.modified = True
+            messages.success(request, 'Товар удален из корзины')
+    else:
+        messages.error(request, 'Товар не найден в корзине')
+    
     return redirect('rental:cart')
 
 def checkout(request):
@@ -107,19 +182,39 @@ def checkout(request):
         messages.error(request, 'Корзина пуста')
         return redirect('rental:cart')
     
+    # Получаем количество дней из GET параметра
+    rental_days = int(request.GET.get('days', 1))
+    
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
             
-            # Рассчитываем общую сумму
+            # Рассчитываем общую сумму с учетом дней
             total = 0
-            for product_id, quantity in cart.items():
+            for product_id, item_data in cart.items():
                 try:
                     product = Product.objects.get(id=product_id)
-                    total += product.daily_price * quantity
+                    
+                    if isinstance(item_data, int):
+                        quantity = item_data
+                        days = rental_days
+                    else:
+                        quantity = item_data.get('quantity', 1)
+                        days = item_data.get('days', rental_days)
+                    
+                    item_total = product.daily_price * quantity * days
+                    total += item_total
                 except Product.DoesNotExist:
                     pass
+            
+            # Применяем скидки
+            if rental_days >= 30:
+                total *= 0.85  # 15% скидка
+            elif rental_days >= 14:
+                total *= 0.90  # 10% скидка
+            elif rental_days >= 7:
+                total *= 0.95  # 5% скидка
             
             order.total_amount = total
             order.created_by_admin = request.user.is_staff if request.user.is_authenticated else False
@@ -131,14 +226,22 @@ def checkout(request):
             order.save()
             
             # Создаем позиции заявки
-            for product_id, quantity in cart.items():
+            for product_id, item_data in cart.items():
                 try:
                     product = Product.objects.get(id=product_id)
+                    
+                    if isinstance(item_data, int):
+                        quantity = item_data
+                        days = rental_days
+                    else:
+                        quantity = item_data.get('quantity', 1)
+                        days = item_data.get('days', rental_days)
+                    
                     OrderItem.objects.create(
                         order=order,
                         product=product,
                         quantity=quantity,
-                        price=product.daily_price
+                        price=product.daily_price * days  # Сохраняем цену с учетом дней
                     )
                     
                     # Если заявка подтверждена, списываем товар
@@ -161,23 +264,46 @@ def checkout(request):
     cart_items = []
     total = 0
     
-    for product_id, quantity in cart.items():
+    for product_id, item_data in cart.items():
         try:
             product = Product.objects.get(id=product_id)
-            item_total = product.daily_price * quantity
+            
+            if isinstance(item_data, int):
+                quantity = item_data
+                days = rental_days
+            else:
+                quantity = item_data.get('quantity', 1)
+                days = item_data.get('days', rental_days)
+            
+            item_total = product.daily_price * quantity * days
             cart_items.append({
                 'product': product,
                 'quantity': quantity,
+                'days': days,
                 'total': item_total
             })
             total += item_total
         except Product.DoesNotExist:
             pass
     
+    # Применяем скидки для отображения
+    discount = 0
+    if rental_days >= 30:
+        discount = 15
+    elif rental_days >= 14:
+        discount = 10
+    elif rental_days >= 7:
+        discount = 5
+    
+    discounted_total = total * (1 - discount / 100) if discount > 0 else total
+    
     context = {
         'form': form,
         'cart_items': cart_items,
-        'total': total
+        'total': total,
+        'discounted_total': discounted_total,
+        'discount': discount,
+        'rental_days': rental_days
     }
     return render(request, 'rental/checkout.html', context)
 
@@ -226,3 +352,52 @@ def download_order_pdf(request, order_id):
     response['Content-Disposition'] = f'attachment; filename="order_{order.id}.pdf"'
     
     return response
+
+def update_cart_quantity(request):
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        new_quantity = int(request.POST.get('quantity', 1))
+        
+        cart = request.session.get('cart', {})
+        
+        if str(product_id) in cart:
+            try:
+                product = Product.objects.get(id=product_id)
+                
+                if new_quantity > product.available_quantity:
+                    messages.error(request, f'Недостаточно товара на складе. Доступно: {product.available_quantity}')
+                elif new_quantity <= 0:
+                    # Удаляем товар из корзины
+                    cart.pop(str(product_id), None)
+                    messages.success(request, 'Товар удален из корзины')
+                else:
+                    # Обновляем количество
+                    current_item = cart[str(product_id)]
+                    
+                    if isinstance(current_item, int):
+                        # Старый формат - конвертируем в новый
+                        cart[str(product_id)] = {
+                            'quantity': new_quantity,
+                            'days': 1
+                        }
+                    elif isinstance(current_item, dict):
+                        # Новый формат - обновляем количество
+                        cart[str(product_id)]['quantity'] = new_quantity
+                    else:
+                        # Неизвестный формат - создаем новый
+                        cart[str(product_id)] = {
+                            'quantity': new_quantity,
+                            'days': 1
+                        }
+                    
+                    messages.success(request, 'Количество обновлено')
+                
+                request.session['cart'] = cart
+                request.session.modified = True
+                
+            except Product.DoesNotExist:
+                messages.error(request, 'Товар не найден')
+        else:
+            messages.error(request, 'Товар не найден в корзине')
+    
+    return redirect('rental:cart')
