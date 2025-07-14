@@ -4,101 +4,172 @@
 {% block title %}Каталог товаров - Аренда оборудования{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Фильтры и поиск -->
+<div class="row mb-4">
     <div class="col-12">
-        <div class="search-form">
-            <form method="get" class="row g-3">
-                <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" placeholder="Поиск товаров..." value="{{ search_query }}">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold text-dark">
+                            <i class="fas fa-search text-primary"></i> Поиск товаров
+                        </label>
+                        <input type="text" name="search" class="form-control form-control-lg" 
+                               placeholder="Введите название товара, артикул или описание..." 
+                               value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search"></i> Найти товары
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Теги-фильтры -->
+                <div class="mt-4">
+                    <label class="form-label fw-bold text-dark mb-3">
+                        <i class="fas fa-tags text-primary"></i> Категории
+                    </label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="?days={{ request.GET.days|default:1 }}" 
+                           class="btn btn-outline-primary {% if not selected_tag %}btn-primary text-white{% endif %} rounded-pill">
+                            <i class="fas fa-th-large"></i> Все товары
+                        </a>
+                        {% for tag in tags %}
+                            <a href="?tag={{ tag.id }}&days={{ request.GET.days|default:1 }}" 
+                               class="btn btn-outline-primary {% if selected_tag == tag.id|stringformat:'s' %}btn-primary text-white{% endif %} rounded-pill">
+                                <i class="fas fa-tag"></i> {{ tag.name }}
+                            </a>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search"></i> Найти
-                    </button>
-                </div>
-            </form>
-            
-            <div class="filter-tags">
-                <a href="?days={{ request.GET.days|default:1 }}" class="btn tag-btn {% if not selected_tag %}active{% endif %}">Все товары</a>
-                {% for tag in tags %}
-                    <a href="?tag={{ tag.id }}&days={{ request.GET.days|default:1 }}" class="btn tag-btn {% if selected_tag == tag.id|stringformat:'s' %}active{% endif %}">
-                        {{ tag.name }}
-                    </a>
-                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
+<!-- Результаты поиска -->
+{% if search_query %}
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="fas fa-info-circle"></i>
+    Результаты поиска по запросу: <strong>"{{ search_query }}"</strong>
+    <span class="badge bg-primary ms-2">{{ products.count }} товаров</span>
+</div>
+{% endif %}
+
+<!-- Каталог товаров -->
+<div class="row g-4">
     {% for product in products %}
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card product-card">
-            {% if product.photo %}
-                <img src="{{ product.photo.url }}" class="card-img-top product-image" alt="{{ product.name }}">
-            {% else %}
-                <div class="card-img-top product-image bg-light d-flex align-items-center justify-content-center">
-                    <i class="fas fa-image fa-3x text-muted"></i>
-                </div>
-            {% endif %}
-            <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ product.name }}</h5>
-                <p class="text-muted small">Арт. {{ product.article }}</p>
-                {% if product.description %}
-                    <p class="card-text">{{ product.description|truncatewords:15 }}</p>
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card product-card h-100 shadow-sm border-0 overflow-hidden">
+            <!-- Изображение товара -->
+            <div class="position-relative overflow-hidden">
+                {% if product.photo %}
+                    <img src="{{ product.photo.url }}" class="card-img-top product-image" alt="{{ product.name }}">
+                {% else %}
+                    <div class="card-img-top product-image bg-gradient d-flex align-items-center justify-content-center">
+                        <div class="text-center text-white">
+                            <i class="fas fa-camera fa-3x mb-2 opacity-50"></i>
+                            <p class="mb-0 small">Фото скоро появится</p>
+                        </div>
+                    </div>
                 {% endif %}
                 
-                <!-- Форма добавления в корзину с количеством и днями -->
+                <!-- Статус наличия -->
+                <div class="position-absolute top-0 end-0 m-2">
+                    {% if product.available_quantity <= 0 %}
+                        <span class="badge bg-danger fs-6">Нет в наличии</span>
+                    {% elif product.available_quantity <= 3 %}
+                        <span class="badge bg-warning fs-6">Мало: {{ product.available_quantity }} шт.</span>
+                    {% else %}
+                        <span class="badge bg-success fs-6">{{ product.available_quantity }} шт.</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Быстрый просмотр -->
+                <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-2 product-overlay">
+                    <small><i class="fas fa-barcode"></i> {{ product.article }}</small>
+                </div>
+            </div>
+            
+            <!-- Информация о товаре -->
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title fw-bold text-dark mb-2">{{ product.name }}</h5>
+                
+                {% if product.description %}
+                    <p class="card-text text-muted small mb-3">{{ product.description|truncatewords:12 }}</p>
+                {% endif %}
+                
+                <!-- Теги -->
+                {% if product.tags.exists %}
+                    <div class="mb-3">
+                        {% for tag in product.tags.all|slice:":2" %}
+                            <span class="badge bg-light text-dark me-1">{{ tag.name }}</span>
+                        {% endfor %}
+                        {% if product.tags.count > 2 %}
+                            <span class="badge bg-light text-muted">+{{ product.tags.count|add:"-2" }}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                <!-- Форма добавления в корзину -->
                 <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="mt-auto">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label small">Количество:</label>
-                                <input type="number" name="quantity" class="form-control form-control-sm" value="1" min="1" max="{{ product.available_quantity }}" id="qty-{{ product.id }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small">Дней:</label>
-                                <input type="number" name="days" class="form-control form-control-sm" value="{{ request.GET.days|default:1 }}" min="1" max="365" id="days-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
-                            </div>
-                        </div>
-                    </div>
                     
-                    <div class="price-display mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="text-success fw-bold">{{ product.daily_price }} ₽/день</span><br>
-                                <small class="text-primary" id="calc-{{ product.id }}">
-                                    {% with days=request.GET.days|default:1 %}
-                                        {{ product.daily_price|floatformat:0 }} × 1 × {{ days }} = 
-                                        <strong>{{ product.daily_price|mul:days|floatformat:0 }} ₽</strong>
-                                    {% endwith %}
-                                </small>
+                    <!-- Калькулятор цены -->
+                    <div class="bg-light rounded p-3 mb-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Количество:</label>
+                                <input type="number" name="quantity" class="form-control form-control-sm" 
+                                       value="1" min="1" max="{{ product.available_quantity }}" 
+                                       id="qty-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
                             </div>
-                            <span class="badge bg-secondary">{{ product.available_quantity }} шт.</span>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Дней:</label>
+                                <input type="number" name="days" class="form-control form-control-sm" 
+                                       value="{{ request.GET.days|default:1 }}" min="1" max="365" 
+                                       id="days-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
+                            </div>
                         </div>
                         
-                        <!-- Информация о скидке -->
-                        <div id="discount-{{ product.id }}" class="mt-1" style="display: none;">
-                            <small class="text-success">
-                                <i class="fas fa-percent"></i> <span class="discount-text"></span>
+                        <!-- Расчет стоимости -->
+                        <div class="mt-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-success fs-5">{{ product.daily_price }} сум/день</span>
+                            </div>
+                            <small class="text-primary d-block mt-1" id="calc-{{ product.id }}">
+                                {% with days=request.GET.days|default:1 %}
+                                    {{ product.daily_price|floatformat:0 }} × 1 × {{ days }} = 
+                                    <strong class="text-success">{{ product.daily_price|mul:days|floatformat:0 }} сум</strong>
+                                {% endwith %}
                             </small>
+                            
+                            <!-- Информация о скидке -->
+                            <div id="discount-{{ product.id }}" class="mt-1" style="display: none;">
+                                <small class="text-success fw-bold">
+                                    <i class="fas fa-percent"></i> <span class="discount-text"></span>
+                                </small>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'rental:product_detail' product.id %}?days={{ request.GET.days|default:1 }}" class="btn btn-outline-primary flex-grow-1">
-                            Подробнее
-                        </a>
+                    <!-- Кнопки действий -->
+                    <div class="d-grid gap-2">
                         {% if product.available_quantity > 0 %}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-cart-plus"></i>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-cart-plus"></i> Добавить в корзину
                             </button>
                         {% else %}
-                            <button type="button" class="btn btn-secondary" disabled>
-                                <i class="fas fa-ban"></i>
+                            <button type="button" class="btn btn-secondary btn-lg" disabled>
+                                <i class="fas fa-ban"></i> Нет в наличии
                             </button>
                         {% endif %}
+                        
+                        <a href="{% url 'rental:product_detail' product.id %}?days={{ request.GET.days|default:1 }}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-info-circle"></i> Подробнее
+                        </a>
                     </div>
                 </form>
             </div>
@@ -107,17 +178,143 @@
     {% empty %}
     <div class="col-12">
         <div class="text-center py-5">
-            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <div class="mb-4">
+                <i class="fas fa-search fa-5x text-muted opacity-50"></i>
+            </div>
             <h3 class="text-muted">Товары не найдены</h3>
-            <p class="text-muted">Попробуйте изменить параметры поиска</p>
+            <p class="text-muted">Попробуйте изменить параметры поиска или выберите другую категорию</p>
+            <a href="{% url 'rental:product_list' %}" class="btn btn-primary">
+                <i class="fas fa-refresh"></i> Показать все товары
+            </a>
         </div>
     </div>
     {% endfor %}
 </div>
+
+<!-- Уведомления -->
+<div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+
+<style>
+/* Дополнительные стили для каталога */
+.product-card {
+    transition: all 0.3s ease;
+    border-radius: 15px !important;
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
+}
+
+.product-image {
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+    transform: scale(1.05);
+}
+
+.product-overlay {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.product-card:hover .product-overlay {
+    opacity: 1;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.form-control:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    line-height: 1.3;
+    min-height: 2.6rem;
+}
+
+.card-text {
+    line-height: 1.4;
+    min-height: 3rem;
+}
+
+/* Анимация для кнопок */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Стили для уведомлений */
+.notification {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    border-left: 4px solid #28a745;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .product-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+        min-height: auto;
+    }
+    
+    .card-text {
+        min-height: auto;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Функция обновления цены товара
 function updateProductPrice(productId, dailyPrice) {
     const quantityInput = document.getElementById('qty-' + productId);
     const daysInput = document.getElementById('days-' + productId);
@@ -151,90 +348,35 @@ function updateProductPrice(productId, dailyPrice) {
     // Обновляем отображение цены
     calcDisplay.innerHTML = `
         ${dailyPrice} × ${quantity} × ${days} = 
-        <strong>${finalTotal.toFixed(0)} ₽</strong>
-        ${discount > 0 ? '<del class="text-muted">' + baseTotal.toFixed(0) + ' ₽</del>' : ''}
+        <strong class="text-success">${finalTotal.toFixed(0)} сум</strong>
+        ${discount > 0 ? '<del class="text-muted ms-1">' + baseTotal.toFixed(0) + ' сум</del>' : ''}
     `;
     
     // Показываем информацию о скидке
     if (discount > 0) {
-        discountDiv.querySelector('.discount-text').textContent = discountText + ` (экономия: ${(baseTotal - finalTotal).toFixed(0)} ₽)`;
+        discountDiv.querySelector('.discount-text').textContent = discountText + ` (экономия: ${(baseTotal - finalTotal).toFixed(0)} сум)`;
         discountDiv.style.display = 'block';
     } else {
         discountDiv.style.display = 'none';
     }
 }
 
-// Обновляем все цены при изменении количества дней в основном фильтре
-document.getElementById('daysFilter').addEventListener('input', function() {
-    const days = parseInt(this.value) || 1;
-    document.getElementById('selectedDays').textContent = days;
-    
-    // Обновляем все поля дней в карточках товаров
-    document.querySelectorAll('input[name="days"]').forEach(function(input) {
-        input.value = days;
-        const productId = input.id.split('-')[1];
-        const productCard = input.closest('.card-body');
-        const dailyPrice = parseFloat(productCard.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
-        updateProductPrice(productId, dailyPrice);
-    });
-    
-    // Обновляем ссылки на детальные страницы
-    document.querySelectorAll('a[href*="product_detail"]').forEach(function(link) {
-        const url = new URL(link.href);
-        url.searchParams.set('days', days);
-        link.href = url.toString();
-    });
-});
-
-// Обновляем цены при изменении количества
-document.addEventListener('input', function(e) {
-    if (e.target.name === 'quantity' || e.target.name === 'days') {
-        const productId = e.target.id.split('-')[1];
-        const productCard = e.target.closest('.card-body');
-        const dailyPrice = parseFloat(productCard.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
-        updateProductPrice(productId, dailyPrice);
-    }
-});
-
-function updateHeaderDiscount(days) {
-    const alertDiv = document.querySelector('.alert-info');
-    const selectedDaysSpan = document.getElementById('selectedDays');
-    let badge = alertDiv.querySelector('.badge');
-    
-    // Удаляем существующий badge
-    if (badge) {
-        badge.remove();
-    }
-    
-    // Добавляем новый badge если есть скидка
-    if (days >= 30) {
-        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 15%!</span>';
-    } else if (days >= 14) {
-        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 10%!</span>';
-    } else if (days >= 7) {
-        alertDiv.innerHTML += '<span class="badge bg-success ms-2">Скидка 5%!</span>';
-    }
-}
-
-// Инициализируем цены при загрузке страницы
+// AJAX добавление в корзину
 document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем цены для всех товаров
     document.querySelectorAll('.card-body').forEach(function(cardBody) {
         const daysInput = cardBody.querySelector('input[name="days"]');
         if (daysInput) {
             const productId = daysInput.id.split('-')[1];
-            const dailyPrice = parseFloat(cardBody.querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+            const dailyPrice = parseFloat(cardBody.closest('.card').querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
             updateProductPrice(productId, dailyPrice);
         }
     });
-});
-</script>
-<script>
-// AJAX добавление в корзину
-document.addEventListener('DOMContentLoaded', function() {
+
     // Обработка всех форм добавления в корзину
     document.querySelectorAll('form[action*="add-to-cart"]').forEach(function(form) {
         form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Предотвращаем обычную отправку формы
+            e.preventDefault();
             
             const formData = new FormData(this);
             const submitButton = this.querySelector('button[type="submit"]');
@@ -242,9 +384,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Показываем loading состояние
             submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Добавляем...';
             
-            // Отправляем AJAX запрос
+            // Отправляем запрос
             fetch(this.action, {
                 method: 'POST',
                 body: formData,
@@ -255,16 +397,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => {
                 if (response.ok) {
                     // Успешно добавлено
-                    submitButton.innerHTML = '<i class="fas fa-check text-success"></i>';
+                    submitButton.innerHTML = '<i class="fas fa-check"></i> Добавлено!';
                     submitButton.className = submitButton.className.replace('btn-primary', 'btn-success');
                     
-                    // Обновляем счетчик корзины в навбаре
+                    // Обновляем счетчик корзины
                     updateCartCounter();
                     
                     // Показываем уведомление
-                    showNotification('Товар добавлен в корзину!', 'success');
+                    showNotification('Товар успешно добавлен в корзину!', 'success');
                     
-                    // Возвращаем кнопку в исходное состояние через 2 секунды
+                    // Возвращаем кнопку в исходное состояние
                     setTimeout(() => {
                         submitButton.innerHTML = originalText;
                         submitButton.className = submitButton.className.replace('btn-success', 'btn-primary');
@@ -276,23 +418,24 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                submitButton.innerHTML = '<i class="fas fa-times text-danger"></i>';
-                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-times"></i> Ошибка';
+                submitButton.className = submitButton.className.replace('btn-primary', 'btn-danger');
                 
                 showNotification('Ошибка при добавлении товара', 'error');
                 
-                // Возвращаем кнопку в исходное состояние
                 setTimeout(() => {
                     submitButton.innerHTML = originalText;
+                    submitButton.className = submitButton.className.replace('btn-danger', 'btn-primary');
+                    submitButton.disabled = false;
                 }, 2000);
             });
         });
     });
 });
 
-// Функция для обновления счетчика корзины
+// Обновление счетчика корзины
 function updateCartCounter() {
-    fetch('/cart-count/') // Нужно будет создать этот endpoint
+    fetch('{% url "rental:cart_count_api" %}')
     .then(response => response.json())
     .then(data => {
         const cartCounter = document.querySelector('.cart-count');
@@ -304,24 +447,40 @@ function updateCartCounter() {
     .catch(error => console.error('Error updating cart counter:', error));
 }
 
-// Функция для показа уведомлений
+// Показ уведомлений
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.className = 'notification';
+    if (type === 'error') {
+        notification.style.borderLeftColor = '#dc3545';
+    }
+    
     notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} text-${type === 'success' ? 'success' : 'danger'} me-2"></i>
+            <span>${message}</span>
+            <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
     `;
     
-    document.body.appendChild(notification);
+    document.getElementById('notifications').appendChild(notification);
     
-    // Автоматически скрыть через 3 секунды
+    // Автоматически скрыть через 4 секунды
     setTimeout(() => {
         if (notification.parentNode) {
             notification.remove();
         }
-    }, 3000);
+    }, 4000);
 }
+
+// Обновление цен при изменении полей
+document.addEventListener('input', function(e) {
+    if (e.target.name === 'quantity' || e.target.name === 'days') {
+        const productId = e.target.id.split('-')[1];
+        const productCard = e.target.closest('.card-body');
+        const dailyPrice = parseFloat(productCard.closest('.card').querySelector('.text-success').textContent.match(/[\d.]+/)[0]);
+        updateProductPrice(productId, dailyPrice);
+    }
+});
 </script>
 {% endblock %}

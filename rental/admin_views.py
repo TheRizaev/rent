@@ -35,7 +35,11 @@ def admin_orders(request):
     
     status_filter = request.GET.get('status', '')
     if status_filter:
-        orders = orders.filter(status=status_filter)
+        orders = orders.filter(
+            Q(contact_person__icontains=search_query) |
+            Q(phone1__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
     
     search_query = request.GET.get('search', '')
     if search_query:
@@ -382,7 +386,7 @@ def admin_create_order(request):
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
-                    # Цена за день * количество * количество дней
+                    # ИСПРАВЛЕНО: Цена за день * количество * количество дней из заказа
                     total += product.daily_price * item['quantity'] * rental_days
                 except Product.DoesNotExist:
                     pass
@@ -398,7 +402,7 @@ def admin_create_order(request):
                         order=order,
                         product=product,
                         quantity=item['quantity'],
-                        # ИСПРАВЛЕНО: Цена за единицу товара за весь период
+                        # ИСПРАВЛЕНО: Цена за единицу товара за весь период аренды
                         price=product.daily_price * rental_days
                     )
                     

@@ -15,7 +15,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'your-secret-key-here'
-DEBUG = False
+DEBUG = True  # ИСПРАВЛЕНО: Включили DEBUG для разработки
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
@@ -85,11 +85,23 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# ИСПРАВЛЕНО: Правильные настройки для статических файлов и медиа
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# ИСПРАВЛЕНО: Правильные настройки для медиа файлов
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ИСПРАВЛЕНО: Дополнительные настройки для безопасности файлов
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+
+# Разрешенные расширения файлов для загрузки
+ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+
+# Максимальный размер изображения
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB

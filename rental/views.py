@@ -202,8 +202,9 @@ def checkout(request):
         if form.is_valid():
             order = form.save(commit=False)
             
-            # Рассчитываем общую сумму
+            # ИСПРАВЛЕНО: Правильный расчет общей суммы
             total = 0
+            rental_days = (order.rental_end - order.rental_start).days + 1
             
             for product_id, item_data in cart.items():
                 try:
@@ -211,12 +212,13 @@ def checkout(request):
                     
                     if isinstance(item_data, int):
                         quantity = item_data
-                        days = 1
+                        days = rental_days  # Используем дни из формы заказа
                     else:
                         quantity = item_data.get('quantity', 1)
-                        days = item_data.get('days', 1)
+                        # Игнорируем дни из корзины, используем дни из заказа
+                        days = rental_days
                     
-                    # Правильный расчет: цена за день * количество * дни
+                    # Правильный расчет: цена за день * количество * дни аренды
                     item_total = product.daily_price * quantity * days
                     total += item_total
                 except Product.DoesNotExist:
@@ -238,17 +240,15 @@ def checkout(request):
                     
                     if isinstance(item_data, int):
                         quantity = item_data
-                        days = 1
                     else:
                         quantity = item_data.get('quantity', 1)
-                        days = item_data.get('days', 1)
                     
-                    # ИСПРАВЛЕНО: Цена указывается за весь период аренды одной единицы товара
+                    # ИСПРАВЛЕНО: Цена указывается за единицу товара за весь период аренды из заказа
                     OrderItem.objects.create(
                         order=order,
                         product=product,
                         quantity=quantity,
-                        price=product.daily_price * days  # Цена за единицу товара за весь период
+                        price=product.daily_price * rental_days  # Цена за единицу за весь период
                     )
                     
                     # Если заявка подтверждена, списываем товар
@@ -267,9 +267,24 @@ def checkout(request):
     else:
         form = OrderForm()
     
-    # Подготавливаем данные корзины для отображения
+    # ИСПРАВЛЕНО: Подготавливаем данные корзины для отображения с правильным расчетом
     cart_items = []
     total = 0
+    
+    # Получаем предварительные даты из GET параметров или используем значения по умолчанию
+    rental_start = request.GET.get('rental_start')
+    rental_end = request.GET.get('rental_end')
+    
+    if rental_start and rental_end:
+        try:
+            from datetime import datetime
+            start_date = datetime.strptime(rental_start, '%Y-%m-%d').date()
+            end_date = datetime.strptime(rental_end, '%Y-%m-%d').date()
+            rental_days = (end_date - start_date).days + 1
+        except:
+            rental_days = 1
+    else:
+        rental_days = 1
     
     for product_id, item_data in cart.items():
         try:
@@ -277,11 +292,14 @@ def checkout(request):
             
             if isinstance(item_data, int):
                 quantity = item_data
-                days = 1
+                # Используем rental_days вместо дней из корзины
+                days = rental_days
             else:
                 quantity = item_data.get('quantity', 1)
-                days = item_data.get('days', 1)
+                # Используем rental_days вместо дней из корзины
+                days = rental_days
             
+            # Правильный расчет
             item_total = product.daily_price * quantity * days
             
             cart_items.append({
@@ -298,7 +316,8 @@ def checkout(request):
     context = {
         'form': form,
         'cart_items': cart_items,
-        'total': total
+        'total': total,
+        'rental_days': rental_days
     }
     return render(request, 'rental/checkout.html', context)
 
