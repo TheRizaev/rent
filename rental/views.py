@@ -28,6 +28,7 @@ def product_list(request):
     tag_filter = request.GET.get('tag', '')
     
     if search_query:
+        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
         products = products.filter(
             Q(name__icontains=search_query) | 
             Q(article__icontains=search_query) |
@@ -71,7 +72,7 @@ def cart_view(request):
                 # Неизвестный формат, пропускаем
                 continue
             
-            # Рассчитываем стоимость (без скидок)
+            # Рассчитываем стоимость (цена за день * количество * дни)
             item_total = product.daily_price * quantity * days
             
             cart_items.append({
@@ -201,7 +202,7 @@ def checkout(request):
         if form.is_valid():
             order = form.save(commit=False)
             
-            # Рассчитываем общую сумму (без скидок)
+            # Рассчитываем общую сумму
             total = 0
             
             for product_id, item_data in cart.items():
@@ -215,6 +216,7 @@ def checkout(request):
                         quantity = item_data.get('quantity', 1)
                         days = item_data.get('days', 1)
                     
+                    # Правильный расчет: цена за день * количество * дни
                     item_total = product.daily_price * quantity * days
                     total += item_total
                 except Product.DoesNotExist:
@@ -241,11 +243,12 @@ def checkout(request):
                         quantity = item_data.get('quantity', 1)
                         days = item_data.get('days', 1)
                     
+                    # ИСПРАВЛЕНО: Цена указывается за весь период аренды одной единицы товара
                     OrderItem.objects.create(
                         order=order,
                         product=product,
                         quantity=quantity,
-                        price=product.daily_price * days  # Цена за весь период
+                        price=product.daily_price * days  # Цена за единицу товара за весь период
                     )
                     
                     # Если заявка подтверждена, списываем товар

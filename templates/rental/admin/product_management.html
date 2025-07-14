@@ -68,9 +68,17 @@
                         <td>{{ product.daily_price }} сум</td>
                         <td>{{ product.shelf }}</td>
                         <td>
-                            <a href="{% url 'edit_product' product.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'edit_product' product.id %}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'rental:product_detail' product.id %}" class="btn btn-sm btn-outline-info" title="Просмотр на сайте" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <a href="{% url 'delete_product' product.id %}" class="btn btn-sm btn-outline-danger" title="Удалить товар">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

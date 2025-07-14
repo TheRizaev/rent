@@ -39,6 +39,7 @@ def admin_orders(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
+        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
         orders = orders.filter(
             Q(contact_person__icontains=search_query) |
             Q(phone1__icontains=search_query) |
@@ -235,6 +236,7 @@ def product_management(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
+        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |
@@ -282,12 +284,46 @@ def edit_product(request, product_id):
     
     return render(request, 'rental/admin/edit_product.html', {'form': form, 'product': product})
 
+# НОВАЯ ФУНКЦИЯ: Удаление товара
+@user_passes_test(is_admin)
+def delete_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    
+    if request.method == 'POST':
+        # Проверяем, используется ли товар в активных заявках
+        active_orders = OrderItem.objects.filter(
+            product=product,
+            order__status__in=['pending', 'confirmed', 'in_rent']
+        ).count()
+        
+        if active_orders > 0:
+            messages.error(request, f'Нельзя удалить товар "{product.name}": он используется в {active_orders} активных заявках')
+        else:
+            product_name = product.name
+            product.delete()
+            messages.success(request, f'Товар "{product_name}" успешно удален')
+        
+        return redirect('product_management')
+    
+    # Подсчитываем использование товара
+    active_orders = OrderItem.objects.filter(
+        product=product,
+        order__status__in=['pending', 'confirmed', 'in_rent']
+    ).count()
+    
+    context = {
+        'product': product,
+        'active_orders': active_orders,
+    }
+    return render(request, 'rental/admin/confirm_delete_product.html', context)
+
 @user_passes_test(is_admin)
 def inventory_view(request):
     products = Product.objects.all()
     
     search_query = request.GET.get('search', '')
     if search_query:
+        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |
@@ -339,12 +375,15 @@ def admin_create_order(request):
                         'products': Product.objects.filter(available_quantity__gt=0)
                     })
             
-            # Рассчитываем общую сумму
+            # ИСПРАВЛЕНО: Рассчитываем общую сумму правильно
             total = 0
+            rental_days = (order.rental_end - order.rental_start).days + 1
+            
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
-                    total += product.daily_price * item['quantity']
+                    # Цена за день * количество * количество дней
+                    total += product.daily_price * item['quantity'] * rental_days
                 except Product.DoesNotExist:
                     pass
             
@@ -359,7 +398,8 @@ def admin_create_order(request):
                         order=order,
                         product=product,
                         quantity=item['quantity'],
-                        price=product.daily_price
+                        # ИСПРАВЛЕНО: Цена за единицу товара за весь период
+                        price=product.daily_price * rental_days
                     )
                     
                     # Списываем товар

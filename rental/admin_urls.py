@@ -19,6 +19,7 @@ urlpatterns = [
     path('products/', admin_views.product_management, name='product_management'),
     path('products/add/', admin_views.add_product, name='add_product'),
     path('products/<int:product_id>/edit/', admin_views.edit_product, name='edit_product'),
+    path('products/<int:product_id>/delete/', admin_views.delete_product, name='delete_product'),  # НОВОЕ
     path('inventory/', admin_views.inventory_view, name='inventory_view'),
     
     # Создание заявок
