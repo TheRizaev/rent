@@ -5,6 +5,10 @@ from django.utils import timezone
 class Storage(models.Model):
     name = models.CharField(max_length=10, verbose_name='Название стойки')
     
+    def save(self, *args, **kwargs):
+        self.name = self.name.strip().upper()
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return self.name
     
@@ -15,6 +19,10 @@ class Storage(models.Model):
 class Shelf(models.Model):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, verbose_name='Стойка')
     number = models.CharField(max_length=10, verbose_name='Номер полки')
+    
+    def save(self, *args, **kwargs):
+        self.number = self.number.strip()
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.storage.name}{self.number}"
@@ -29,15 +37,21 @@ class Tag(models.Model):
     
     def __str__(self):
         if self.parent:
-            return f"{self.parent} → {self.name}"
-        return self.name
+            return f"{self.parent.get_display_name()} → {self.get_display_name()}"
+        return self.get_display_name()
     
+    def save(self, *args, **kwargs):
+        self.name = self.name.strip().lower()
+        super().save(*args, **kwargs)
+
+    def get_display_name(self):
+            return self.name.capitalize()
+
     def get_full_path(self):
-        """Возвращает полный путь тега (Родитель → Дочерний → Внук)"""
         path = []
         current = self
         while current:
-            path.insert(0, current.name)
+            path.insert(0, current.get_display_name())
             current = current.parent
         return ' → '.join(path)
     
@@ -107,8 +121,25 @@ class Product(models.Model):
     shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, verbose_name='Место хранения')
     created_at = models.DateTimeField(auto_now_add=True)
     
+    def save(self, *args, **kwargs):
+        self.name = self.name.strip().lower()
+        self.article = self.article.strip().upper()
+        if self.description:
+            self.description = self.description.strip().lower()
+        super().save(*args, **kwargs)
+    
+    def get_display_name(self):
+        """Возвращает название с заглавной буквы"""
+        return self.name.capitalize()
+    
+    def get_display_description(self):
+        """Возвращает описание с заглавной буквы"""
+        if self.description:
+            return self.description.capitalize()
+        return ''
+    
     def __str__(self):
-        return self.name
+        return self.get_display_name()
     
     class Meta:
         verbose_name = 'Товар'
@@ -153,6 +184,18 @@ class Order(models.Model):
             return self.total_amount / rental_days
         return 0
     
+    def save(self, *args, **kwargs):
+        self.contact_person = ' '.join(word.capitalize() for word in self.contact_person.strip().split())
+        if self.comment:
+            self.comment = self.comment.strip().lower()
+        super().save(*args, **kwargs)
+    
+    def get_display_comment(self):
+        """Возвращает комментарий с заглавной буквы"""
+        if self.comment:
+            return self.comment.capitalize()
+        return ''
+
     class Meta:
         verbose_name = 'Заявка'
         verbose_name_plural = 'Заявки'

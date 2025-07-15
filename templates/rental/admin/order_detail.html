@@ -60,7 +60,7 @@
                 {% if order.comment %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Комментарий:</strong></div>
-                    <div class="col-sm-9">{{ order.comment }}</div>
+                    <div class="col-sm-9">{{ order.get_display_comment }}</div>
                 </div>
                 {% endif %}
                 <div class="row mb-3">
@@ -99,7 +99,7 @@
                                             <img src="{{ item.product.photo.url }}" alt="{{ item.product.name }}" style="width: 40px; height: 40px; object-fit: cover;" class="rounded me-2">
                                         {% endif %}
                                         <div>
-                                            <strong>{{ item.product.name }}</strong><br>
+                                            <strong>{{ item.product.get_display_name }}</strong><br>
                                             <small class="text-muted">{{ item.product.daily_price }} сум/день</small>
                                         </div>
                                     </div>

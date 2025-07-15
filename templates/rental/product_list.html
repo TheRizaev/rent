@@ -94,17 +94,17 @@
             
             <!-- Информация о товаре -->
             <div class="card-body d-flex flex-column">
-                <h5 class="card-title fw-bold text-dark mb-2">{{ product.name }}</h5>
+                <h5 class="card-title fw-bold text-dark mb-2">{{ product.get_display_name }}</h5>
                 
                 {% if product.description %}
-                    <p class="card-text text-muted small mb-3">{{ product.description|truncatewords:12 }}</p>
+                    <p class="card-text text-muted small mb-3">{{ product.get_display_description|truncatewords:12 }}</p>
                 {% endif %}
                 
                 <!-- Теги -->
                 {% if product.tags.exists %}
                     <div class="mb-3">
                         {% for tag in product.tags.all|slice:":2" %}
-                            <span class="badge bg-light text-dark me-1">{{ tag.name }}</span>
+                            <span class="badge bg-light text-dark me-1">{{ tag.get_display_name }}</span>
                         {% endfor %}
                         {% if product.tags.count > 2 %}
                             <span class="badge bg-light text-muted">+{{ product.tags.count|add:"-2" }}</span>

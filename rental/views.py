@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.template.loader import render_to_string
 from .models import Product, Order, OrderItem, Tag
@@ -28,12 +29,11 @@ def product_list(request):
     tag_filter = request.GET.get('tag', '')
     
     if search_query:
-        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
-        search_query = search_query.strip()  # Убираем лишние пробелы
+        search_query = search_query.strip().lower()
         products = products.filter(
-            Q(name__icontains=search_query) | 
+            Q(name__contains=search_query) | 
             Q(article__icontains=search_query) |
-            Q(description__icontains=search_query)
+            Q(description__contains=search_query)
         )
     
     if tag_filter:

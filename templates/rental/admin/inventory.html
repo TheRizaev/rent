@@ -60,7 +60,7 @@
                                 </div>
                             {% endif %}
                         </td>
-                        <td><strong>{{ product.name }}</strong></td>
+                        <td><strong>{{ product.get_display_name }}</strong></td>
                         <td><code>{{ product.article }}</code></td>
                         <td>
                             <span class="badge bg-info">{{ product.shelf }}</span>

@@ -47,7 +47,7 @@
             <div class="product-info">
                 <!-- Заголовок и артикул -->
                 <div class="mb-4">
-                    <h1 class="display-5 fw-bold text-dark mb-2">{{ product.name }}</h1>
+                    <h1 class="display-5 fw-bold text-dark mb-2">{{ product.get_display_name }}</h1>
                     <p class="text-muted fs-5">
                         <i class="fas fa-barcode"></i> Артикул: <code class="fs-6">{{ product.article }}</code>
                     </p>
@@ -59,7 +59,7 @@
                         <h5 class="fw-bold text-dark mb-3">
                             <i class="fas fa-info-circle text-primary"></i> Описание
                         </h5>
-                        <p class="lead text-muted">{{ product.description }}</p>
+                        <p class="lead text-muted">{{ product.get_display_description }}</p>
                     </div>
                 {% endif %}
                 
@@ -71,7 +71,7 @@
                         </h6>
                         <div class="d-flex flex-wrap gap-2">
                             {% for tag in product.tags.all %}
-                                <span class="badge bg-light text-dark border px-3 py-2">{{ tag.name }}</span>
+                                <span class="badge bg-light text-dark border px-3 py-2">{{ tag.get_display_name }}</span>
                             {% endfor %}
                         </div>
                     </div>

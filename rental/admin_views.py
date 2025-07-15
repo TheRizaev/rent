@@ -39,8 +39,7 @@ def admin_orders(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
-        search_query = search_query.strip()  # Убираем лишние пробелы
+        search_query = search_query.strip()
         orders = orders.filter(
             Q(contact_person__icontains=search_query) |
             Q(phone1__icontains=search_query) |
@@ -244,7 +243,8 @@ def product_management(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        search_query = search_query.strip()  # Убираем лишние пробелы
+        # ИСПРАВЛЕНО: Поиск без учета регистра
+        search_query = search_query.strip()
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |
@@ -331,8 +331,8 @@ def inventory_view(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
-        search_query = search_query.strip()  # Убираем лишние пробелы
+        # ИСПРАВЛЕНО: Поиск без учета регистра
+        search_query = search_query.strip()
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |

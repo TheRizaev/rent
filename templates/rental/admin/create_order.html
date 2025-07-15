@@ -270,5 +270,21 @@ document.getElementById('productSearch').addEventListener('keypress', function(e
 
 // Инициализация
 updateCartDisplay();
+
+function searchProducts() {
+    const query = document.getElementById('productSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#productsTable tr');
+    
+    rows.forEach(row => {
+        const productName = (row.dataset.productName || '').toLowerCase();
+        const article = row.querySelector('code')?.textContent.toLowerCase() || '';
+        
+        if (productName.includes(query) || article.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
 </script>
 {% endblock %}

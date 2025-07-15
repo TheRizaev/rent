@@ -8,8 +8,8 @@ class OrderForm(forms.ModelForm):
         fields = ['contact_person', 'phone1', 'phone2', 'rental_start', 'rental_end', 'comment']
         widgets = {
             'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите ФИО'}),
-            'phone1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (999) 123-45-67'}),
-            'phone2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+7 (999) 123-45-67 (необязательно)'}),
+            'phone1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67'}),
+            'phone2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67 (необязательно)'}),
             'rental_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'rental_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Дополнительная информация (необязательно)'}),
@@ -41,6 +41,12 @@ class ProductForm(forms.ModelForm):
             'tags': forms.SelectMultiple(attrs={'class': 'form-control'}),
             'shelf': forms.Select(attrs={'class': 'form-control'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.initial['name'] = self.instance.get_display_name()
+            self.initial['description'] = self.instance.get_display_description()
     
     def save(self, commit=True):
         product = super().save(commit=False)
