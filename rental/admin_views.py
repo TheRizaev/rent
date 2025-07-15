@@ -35,15 +35,12 @@ def admin_orders(request):
     
     status_filter = request.GET.get('status', '')
     if status_filter:
-        orders = orders.filter(
-            Q(contact_person__icontains=search_query) |
-            Q(phone1__icontains=search_query) |
-            Q(id__icontains=search_query)
-        )
+        orders = orders.filter(status=status_filter)
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
+        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
+        search_query = search_query.strip()  # Убираем лишние пробелы
         orders = orders.filter(
             Q(contact_person__icontains=search_query) |
             Q(phone1__icontains=search_query) |
@@ -69,7 +66,7 @@ def update_order_status(request, order_id):
         new_status = request.POST.get('status')
         new_payment_status = request.POST.get('payment_status')
         
-        # Проверяем, не пытается ли пользователь изменить уже завершенную заявку
+        # ИСПРАВЛЕНО: Проверяем, не пытается ли пользователь изменить завершенную заявку
         if order.status == 'completed':
             return JsonResponse({
                 'success': False, 
@@ -119,7 +116,14 @@ def update_order_status(request, order_id):
             
             order.status = new_status
         
+        # ИСПРАВЛЕНО: Проверяем статус заявки перед изменением статуса оплаты
         if new_payment_status:
+            # Если заявка завершена, запрещаем изменение статуса оплаты
+            if order.status == 'completed':
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Нельзя изменить статус оплаты завершенной заявки!'
+                })
             order.payment_status = new_payment_status
         
         order.save()
@@ -240,7 +244,7 @@ def product_management(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
+        search_query = search_query.strip()  # Убираем лишние пробелы
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |
@@ -327,7 +331,8 @@ def inventory_view(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
+        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
+        search_query = search_query.strip()  # Убираем лишние пробелы
         products = products.filter(
             Q(name__icontains=search_query) |
             Q(article__icontains=search_query) |

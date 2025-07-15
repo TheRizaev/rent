@@ -71,12 +71,14 @@
                             {% endif %}
                         </td>
                         <td>
+                            <!-- ИСПРАВЛЕНО: Отключаем изменение статуса оплаты для завершенных заявок -->
                             {% if order.status == 'completed' %}
                                 {% if order.payment_status == 'paid' %}
                                     <span class="badge bg-success">Оплачена</span>
                                 {% else %}
                                     <span class="badge bg-danger">Не оплачена</span>
                                 {% endif %}
+                                <small class="text-muted d-block">Изменение запрещено</small>
                             {% else %}
                                 <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}" data-original-value="{{ order.payment_status }}">
                                     <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
@@ -123,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
-    // Обработка изменения статуса заявки
+    // Обработка изменения статуса заявки и оплаты
     document.querySelectorAll('.status-select, .payment-select').forEach(function(select) {
         select.addEventListener('change', function() {
             const orderId = this.dataset.orderId;

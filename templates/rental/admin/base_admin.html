@@ -138,9 +138,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link logout-btn" href="/admin/logout/" onclick="return confirm('Вы действительно хотите выйти?')">
-                                <i class="fas fa-sign-out-alt"></i> Выход
-                            </a>
+                            <!-- ИСПРАВЛЕНО: Правильная ссылка на выход с формой -->
+                            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link logout-btn border-0 bg-transparent w-100 text-start" onclick="return confirm('Вы действительно хотите выйти?')">
+                                    <i class="fas fa-sign-out-alt"></i> Выход
+                                </button>
+                            </form>
                         </li>
                     </ul>
                 </div>
@@ -166,3 +170,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
+</html>

@@ -28,7 +28,8 @@ def product_list(request):
     tag_filter = request.GET.get('tag', '')
     
     if search_query:
-        # ИСПРАВЛЕНО: Используем icontains для поиска без учета регистра
+        # ИСПРАВЛЕНО: Правильный поиск без учета регистра по подстроке
+        search_query = search_query.strip()  # Убираем лишние пробелы
         products = products.filter(
             Q(name__icontains=search_query) | 
             Q(article__icontains=search_query) |

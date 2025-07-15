@@ -131,30 +131,49 @@
                 <h5>Управление статусами</h5>
             </div>
             <div class="card-body">
-                <form id="statusForm">
-                    {% csrf_token %}
+                <!-- ИСПРАВЛЕНО: Показываем предупреждение для завершенных заявок -->
+                {% if order.status == 'completed' %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-lock"></i> 
+                        <strong>Заявка завершена</strong><br>
+                        Изменение статусов заблокировано
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">Статус заявки</label>
-                        <select name="status" class="form-select" id="orderStatus">
-                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
-                            <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                            <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
-                            <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
-                        </select>
+                        <input type="text" class="form-control" value="Завершена" readonly>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Статус оплаты</label>
-                        <select name="payment_status" class="form-select" id="paymentStatus">
-                            <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
-                            <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
-                        </select>
+                        <input type="text" class="form-control" value="{% if order.payment_status == 'paid' %}Оплачена{% else %}Не оплачена{% endif %}" readonly>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-save"></i> Сохранить изменения
-                    </button>
-                </form>
+                {% else %}
+                    <form id="statusForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Статус заявки</label>
+                            <select name="status" class="form-select" id="orderStatus">
+                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
+                                <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
+                                <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Статус оплаты</label>
+                            <select name="payment_status" class="form-select" id="paymentStatus">
+                                <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
+                                <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                    </form>
+                {% endif %}
             </div>
         </div>
 
@@ -180,6 +199,8 @@
 
 {% block extra_js %}
 <script>
+// ИСПРАВЛЕНО: Обработка формы только для незавершенных заявок
+{% if order.status != 'completed' %}
 document.getElementById('statusForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -221,5 +242,6 @@ document.getElementById('statusForm').addEventListener('submit', function(e) {
         document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
     });
 });
+{% endif %}
 </script>
 {% endblock %}
