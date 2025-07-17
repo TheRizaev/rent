@@ -23,10 +23,13 @@ import os
 
 def product_list(request):
     products = Product.objects.filter(available_quantity__gt=0)
-    tags = Tag.objects.filter(parent=None)
+    root_tags = Tag.objects.filter(parent=None)
     
     search_query = request.GET.get('search', '')
     tag_filter = request.GET.get('tag', '')
+    
+    selected_tag = None
+    selected_tag_children = []
     
     if search_query:
         search_query = search_query.strip().lower()
@@ -37,13 +40,24 @@ def product_list(request):
         )
     
     if tag_filter:
-        products = products.filter(tags__id=tag_filter)
+        try:
+            selected_tag = Tag.objects.get(id=tag_filter)
+            descendant_tags = selected_tag.get_descendants()
+            all_tags = [selected_tag] + descendant_tags
+            products = products.filter(tags__in=all_tags).distinct()
+            
+            # Получаем дочерние теги для отображения
+            selected_tag_children = selected_tag.get_children()
+        except Tag.DoesNotExist:
+            pass
     
     context = {
         'products': products,
-        'tags': tags,
-        'search_query': search_query,
-        'selected_tag': tag_filter
+        'root_tags': root_tags,
+        'selected_tag': tag_filter,
+        'selected_tag_obj': selected_tag,
+        'selected_tag_children': selected_tag_children,
+        'search_query': search_query
     }
     return render(request, 'rental/product_list.html', context)
 
@@ -337,68 +351,86 @@ def download_order_pdf(request, order_id):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.pdfbase import pdfmetrics
-    import platform
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from django.conf import settings
     
     # Создаем PDF
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, 
                            topMargin=2*cm, bottomMargin=2*cm)
     
-    # Регистрируем русские шрифты
+    # Регистрируем шрифты из папки static/fonts/
     try:
-        # Определяем путь к шрифтам в зависимости от ОС
-        if platform.system() == "Windows":
-            font_paths = [
-                "C:/Windows/Fonts/arial.ttf",
-                "C:/Windows/Fonts/calibri.ttf",
-                "C:/Windows/Fonts/times.ttf"
-            ]
-        elif platform.system() == "Darwin":  # macOS
-            font_paths = [
-                "/System/Library/Fonts/Arial.ttf",
-                "/System/Library/Fonts/Times.ttc"
-            ]
-        else:  # Linux
-            font_paths = [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-            ]
+        # Путь к папке со шрифтами
+        fonts_dir = os.path.join(settings.BASE_DIR, 'static', 'fonts')
         
-        # Ищем доступный шрифт
+        # Список возможных имен файлов шрифтов
+        font_files = [
+            'TT.ttf'
+        ]
+        
+        bold_font_files = [
+            'TTB.ttf'
+        ]
+        
         font_registered = False
-        for font_path in font_paths:
+        bold_font_registered = False
+        
+        # Пытаемся зарегистрировать обычный шрифт
+        for font_file in font_files:
+            font_path = os.path.join(fonts_dir, font_file)
             if os.path.exists(font_path):
                 try:
-                    pdfmetrics.registerFont(TTFont('RussianFont', font_path))
-                    pdfmetrics.registerFont(TTFont('RussianFont-Bold', font_path))
+                    pdfmetrics.registerFont(TTFont('CustomFont', font_path))
                     font_registered = True
+                    print(f"Зарегистрирован шрифт: {font_file}")
                     break
-                except:
+                except Exception as e:
+                    print(f"Ошибка регистрации шрифта {font_file}: {e}")
                     continue
         
-        if not font_registered:
-            # Если системные шрифты не найдены, используем встроенные
-            raise Exception("No system fonts found")
+        # Пытаемся зарегистрировать жирный шрифт
+        for bold_font_file in bold_font_files:
+            bold_font_path = os.path.join(fonts_dir, bold_font_file)
+            if os.path.exists(bold_font_path):
+                try:
+                    pdfmetrics.registerFont(TTFont('CustomFont-Bold', bold_font_path))
+                    bold_font_registered = True
+                    print(f"Зарегистрирован жирный шрифт: {bold_font_file}")
+                    break
+                except Exception as e:
+                    print(f"Ошибка регистрации жирного шрифта {bold_font_file}: {e}")
+                    continue
+        
+        # Устанавливаем имена шрифтов
+        if font_registered:
+            font_name = 'CustomFont'
+        else:
+            font_name = 'Times-Roman'
+            print("Используется встроенный шрифт Times-Roman")
             
-    except:
-        # Если не удалось загрузить TTF шрифты, используем встроенные шрифты с поддержкой кириллицы
-        # Используем шрифты, которые поддерживают расширенный набор символов
-        font_name = 'Helvetica'
-        font_name_bold = 'Helvetica-Bold'
-    else:
-        font_name = 'RussianFont'
-        font_name_bold = 'RussianFont-Bold'
+        if bold_font_registered:
+            font_name_bold = 'CustomFont-Bold'
+        else:
+            font_name_bold = 'Times-Bold'
+            print("Используется встроенный жирный шрифт Times-Bold")
+            
+    except Exception as e:
+        print(f"Общая ошибка при работе со шрифтами: {e}")
+        # Fallback к встроенным шрифтам
+        font_name = 'Times-Roman'
+        font_name_bold = 'Times-Bold'
     
-    # Стили с русскими шрифтами
+    # Стили с поддержкой кириллицы
     styles = getSampleStyleSheet()
     
-    # Создаем собственные стили с русскими шрифтами
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
         fontName=font_name_bold,
-        fontSize=24,
-        spaceAfter=30,
+        fontSize=18,
+        spaceAfter=20,
         alignment=TA_CENTER,
         textColor=colors.HexColor('#2c3e50')
     )
@@ -407,7 +439,7 @@ def download_order_pdf(request, order_id):
         'CustomHeader',
         parent=styles['Heading2'],
         fontName=font_name_bold,
-        fontSize=16,
+        fontSize=14,
         spaceAfter=12,
         textColor=colors.HexColor('#34495e')
     )
@@ -416,17 +448,17 @@ def download_order_pdf(request, order_id):
         'CustomNormal',
         parent=styles['Normal'],
         fontName=font_name,
-        fontSize=11,
-        spaceAfter=6
+        fontSize=10,
+        spaceAfter=4
     )
     
     # Элементы документа
     story = []
     
     # Заголовок
-    story.append(Paragraph("ЗАЯВКА НА АРЕНДУ ОБОРУДОВАНИЯ", title_style))
-    story.append(Paragraph(f"№ {order.id}", title_style))
-    story.append(Spacer(1, 20))
+    title_text = f"ЗАЯВКА НА АРЕНДУ ОБОРУДОВАНИЯ № {order.id}"
+    story.append(Paragraph(title_text, title_style))
+    story.append(Spacer(1, 15))
     
     # Информация о заявке
     story.append(Paragraph("ИНФОРМАЦИЯ О ЗАЯВКЕ", header_style))
@@ -444,22 +476,25 @@ def download_order_pdf(request, order_id):
         info_data.insert(4, ['Телефон 2:', order.phone2])
     
     if order.comment:
-        info_data.insert(-2, ['Комментарий:', order.comment])
+        info_data.insert(-2, ['Комментарий:', order.get_display_comment()])
     
     if order.created_by_admin:
         info_data.insert(-2, ['Создана администратором:', 'Да'])
     
-    info_table = Table(info_data, colWidths=[4*cm, 12*cm])
+    # Таблица с информацией (увеличиваем размеры)
+    info_table = Table(info_data, colWidths=[5*cm, 13*cm])
     info_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('FONTNAME', (0, 0), (0, -1), font_name_bold),
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8f9fa')),
     ]))
     
     story.append(info_table)
@@ -469,17 +504,23 @@ def download_order_pdf(request, order_id):
     story.append(Paragraph("ТОВАРЫ В ЗАЯВКЕ", header_style))
     
     # Заголовки таблицы товаров
-    items_data = [['№', 'Наименование', 'Артикул', 'Кол-во', 'Цена за период', 'Сумма', 'Место']]
+    items_data = [['№', 'Наименование', 'Артикул', 'Штрих-код', 'Кол-во', 'Цена/период', 'Сумма', 'Место']]
     
     total_sum = 0
     for i, item in enumerate(order.items.all(), 1):
         item_total = item.price * item.quantity
         total_sum += item_total
         
+        # Обрезаем длинные названия
+        name = item.product.get_display_name()
+        if len(name) > 20:
+            name = name[:20] + '...'
+        
         items_data.append([
             str(i),
-            item.product.name[:30] + ('...' if len(item.product.name) > 30 else ''),
+            name,
             item.product.article,
+            getattr(item.product, 'barcode', '-'),  # Добавляем штрих-код
             f"{item.quantity} шт.",
             f"{item.price:.0f} сум",
             f"{item_total:.0f} сум",
@@ -487,33 +528,34 @@ def download_order_pdf(request, order_id):
         ])
     
     # Добавляем итоговую строку
-    items_data.append(['', '', '', '', 'ИТОГО:', f"{order.total_amount:.0f} сум", ''])
+    items_data.append(['', '', '', '', '', 'ИТОГО:', f"{order.total_amount:.0f} сум", ''])
     
-    items_table = Table(items_data, colWidths=[1*cm, 4.5*cm, 2*cm, 1.5*cm, 2*cm, 2*cm, 1.5*cm])
+    # Увеличиваем размеры таблицы товаров для штрих-кода
+    items_table = Table(items_data, colWidths=[0.8*cm, 3.5*cm, 2*cm, 2.5*cm, 1.5*cm, 2.2*cm, 2.2*cm, 1.8*cm])
     items_table.setStyle(TableStyle([
         # Заголовок
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('FONTNAME', (0, 0), (-1, 0), font_name_bold),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         
         # Содержимое
         ('FONTNAME', (0, 1), (-1, -2), font_name),
-        ('FONTSIZE', (0, 1), (-1, -2), 9),
+        ('FONTSIZE', (0, 1), (-1, -2), 7),
         ('ALIGN', (0, 1), (0, -2), 'CENTER'),  # Номера по центру
-        ('ALIGN', (2, 1), (-1, -2), 'CENTER'),  # Числа по центру
+        ('ALIGN', (2, 1), (-1, -2), 'CENTER'),  # Числа и коды по центру
         ('ALIGN', (1, 1), (1, -2), 'LEFT'),    # Названия слева
         
         # Итоговая строка
         ('FONTNAME', (0, -1), (-1, -1), font_name_bold),
-        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('FONTSIZE', (0, -1), (-1, -1), 10),
         ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#ecf0f1')),
-        ('SPAN', (0, -1), (4, -1)),  # Объединяем ячейки для "ИТОГО"
+        ('SPAN', (0, -1), (5, -1)),  # Объединяем ячейки для "ИТОГО"
         
         # Сетка
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         
         # Отступы
@@ -524,7 +566,7 @@ def download_order_pdf(request, order_id):
     ]))
     
     story.append(items_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 20))
     
     # Дополнительная информация
     story.append(Paragraph("ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ", header_style))
@@ -535,37 +577,80 @@ def download_order_pdf(request, order_id):
     additional_info = [
         ['Количество дней аренды:', f"{rental_days} дн."],
         ['Средняя стоимость в день:', f"{order.total_amount / rental_days:.0f} сум/день"],
+        ['Общая сумма:', f"{order.total_amount:.0f} сум"],
     ]
     
-    additional_table = Table(additional_info, colWidths=[4*cm, 8*cm])
+    additional_table = Table(additional_info, colWidths=[6*cm, 8*cm])
     additional_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('FONTNAME', (0, 0), (0, -1), font_name_bold),
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8f9fa')),
     ]))
     
     story.append(additional_table)
-    story.append(Spacer(1, 40))
+    story.append(Spacer(1, 30))
     
     # Подпись
     footer_style = ParagraphStyle(
         'Footer', 
         parent=styles['Normal'], 
-        fontSize=9,
+        fontSize=8,
         fontName=font_name,
         textColor=colors.grey, 
         alignment=TA_RIGHT
     )
     
-    story.append(Paragraph("Дата формирования документа: " + timezone.now().strftime('%d.%m.%Y %H:%M'), footer_style))
+    footer_text = f"Дата формирования документа: {timezone.now().strftime('%d.%m.%Y %H:%M')}"
+    story.append(Paragraph(footer_text, footer_style))
     
     # Генерируем PDF
-    doc.build(story)
+    try:
+        doc.build(story)
+        print("PDF успешно создан")
+    except Exception as e:
+        print(f"Ошибка при создании PDF: {e}")
+        # Создаем упрощенный PDF как fallback
+        buffer.seek(0)
+        buffer.truncate()
+        
+        from reportlab.pdfgen import canvas
+        p = canvas.Canvas(buffer, pagesize=A4)
+        
+        # Простой текстовый PDF
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, 800, f"ЗАЯВКА НА АРЕНДУ ОБОРУДОВАНИЯ № {order.id}")
+        
+        p.setFont("Helvetica", 10)
+        y = 750
+        p.drawString(50, y, f"Дата создания: {order.created_at.strftime('%d.%m.%Y %H:%M')}")
+        y -= 20
+        p.drawString(50, y, f"Контактное лицо: {order.contact_person}")
+        y -= 20
+        p.drawString(50, y, f"Телефон: {order.phone1}")
+        y -= 20
+        p.drawString(50, y, f"Период аренды: {order.rental_start.strftime('%d.%m.%Y')} - {order.rental_end.strftime('%d.%m.%Y')}")
+        y -= 20
+        p.drawString(50, y, f"Общая сумма: {order.total_amount} сум")
+        
+        y -= 40
+        p.drawString(50, y, "ТОВАРЫ:")
+        y -= 20
+        
+        for i, item in enumerate(order.items.all(), 1):
+            if y < 50:  # Проверяем, не достигли ли низа страницы
+                p.showPage()
+                y = 800
+            p.drawString(70, y, f"{i}. {item.product.name} - {item.quantity} шт. - {item.get_total()} сум")
+            y -= 15
+        
+        p.save()
     
     buffer.seek(0)
     response = HttpResponse(buffer.read(), content_type='application/pdf')

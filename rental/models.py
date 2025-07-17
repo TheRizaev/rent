@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+import random
+import string
 
 class Storage(models.Model):
     name = models.CharField(max_length=10, verbose_name='Название стойки')
@@ -112,7 +114,7 @@ class Tag(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     photo = models.ImageField(upload_to='products/', verbose_name='Фото')
-    article = models.CharField(max_length=50, unique=True, verbose_name='Артикул')
+    article = models.CharField(max_length=50, unique=True, verbose_name='Артикул', blank=True)
     description = models.TextField(blank=True, verbose_name='Описание')
     quantity = models.IntegerField(default=0, verbose_name='Количество')
     available_quantity = models.IntegerField(default=0, verbose_name='Доступное количество')
@@ -121,9 +123,25 @@ class Product(models.Model):
     shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, verbose_name='Место хранения')
     created_at = models.DateTimeField(auto_now_add=True)
     
+    def generate_unique_article(self):
+        """Генерирует уникальный 8-значный артикул"""
+        while True:
+            # Генерируем 8-значный номер
+            article = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+            
+            # Проверяем, что такой артикул не существует
+            if not Product.objects.filter(article=article).exists():
+                return article
+    
     def save(self, *args, **kwargs):
         self.name = self.name.strip().lower()
-        self.article = self.article.strip().upper()
+        
+        # Генерируем артикул автоматически, если он не задан
+        if not self.article:
+            self.article = self.generate_unique_article()
+        else:
+            self.article = self.article.strip().upper()
+        
         if self.description:
             self.description = self.description.strip().lower()
         super().save(*args, **kwargs)

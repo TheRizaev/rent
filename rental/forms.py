@@ -31,10 +31,9 @@ class OrderForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'photo', 'article', 'description', 'quantity', 'tags', 'daily_price', 'shelf']
+        fields = ['name', 'photo', 'description', 'quantity', 'tags', 'daily_price', 'shelf']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'article': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'daily_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -44,6 +43,10 @@ class ProductForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Убираем поле артикула из формы, так как оно генерируется автоматически
+        if 'article' in self.fields:
+            del self.fields['article']
+        
         if self.instance and self.instance.pk:
             self.initial['name'] = self.instance.get_display_name()
             self.initial['description'] = self.instance.get_display_description()

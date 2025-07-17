@@ -6,6 +6,11 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Заявка #{{ order.id }}</h1>
     <div>
+        {% if order.status == 'pending' %}
+            <a href="{% url 'edit_order' order.id %}" class="btn btn-outline-warning">
+                <i class="fas fa-edit"></i> Редактировать заявку
+            </a>
+        {% endif %}
         <a href="{% url 'rental:download_order_pdf' order.id %}" class="btn btn-outline-primary">
             <i class="fas fa-download"></i> Скачать PDF
         </a>
@@ -14,6 +19,13 @@
         </a>
     </div>
 </div>
+
+{% if order.status == 'pending' %}
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="fas fa-info-circle"></i>
+    <strong>Заявка ожидает подтверждения:</strong> Вы можете редактировать эту заявку, изменять товары и их количество.
+</div>
+{% endif %}
 
 <div class="row">
     <div class="col-md-8">
@@ -131,7 +143,7 @@
                 <h5>Управление статусами</h5>
             </div>
             <div class="card-body">
-                <!-- ИСПРАВЛЕНО: Показываем предупреждение для завершенных заявок -->
+                <!-- Показываем предупреждение для завершенных заявок -->
                 {% if order.status == 'completed' %}
                     <div class="alert alert-warning">
                         <i class="fas fa-lock"></i> 
@@ -156,7 +168,6 @@
                             <select name="status" class="form-select" id="orderStatus">
                                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
                                 <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                {% comment %} <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option> {% endcomment %}
                                 <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
                             </select>
                         </div>
@@ -199,7 +210,7 @@
 
 {% block extra_js %}
 <script>
-// ИСПРАВЛЕНО: Обработка формы только для незавершенных заявок
+// Обработка формы только для незавершенных заявок
 {% if order.status != 'completed' %}
 document.getElementById('statusForm').addEventListener('submit', function(e) {
     e.preventDefault();

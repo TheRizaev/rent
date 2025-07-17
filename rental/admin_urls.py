@@ -5,6 +5,7 @@ urlpatterns = [
     path('', admin_views.admin_dashboard, name='admin_dashboard'),
     path('orders/', admin_views.admin_orders, name='admin_orders'),
     path('orders/<int:order_id>/', admin_views.admin_order_detail, name='admin_order_detail'),
+    path('orders/<int:order_id>/edit/', admin_views.edit_order, name='edit_order'),
     path('orders/<int:order_id>/update-status/', admin_views.update_order_status, name='update_order_status'),
     
     # Управление стойками и полками
@@ -19,7 +20,7 @@ urlpatterns = [
     path('products/', admin_views.product_management, name='product_management'),
     path('products/add/', admin_views.add_product, name='add_product'),
     path('products/<int:product_id>/edit/', admin_views.edit_product, name='edit_product'),
-    path('products/<int:product_id>/delete/', admin_views.delete_product, name='delete_product'),  # НОВОЕ
+    path('products/<int:product_id>/delete/', admin_views.delete_product, name='delete_product'),
     path('inventory/', admin_views.inventory_view, name='inventory_view'),
     
     # Создание заявок

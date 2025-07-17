@@ -650,3 +650,102 @@ def delete_shelf(request, shelf_id):
         'products_count': shelf.product_set.count(),
     }
     return render(request, 'rental/admin/confirm_delete_shelf.html', context)
+
+@user_passes_test(is_admin)
+def edit_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Проверяем, что заявка в статусе ожидания
+    if order.status != 'pending':
+        messages.error(request, 'Можно редактировать только заявки в статусе "Ожидает подтверждения"')
+        return redirect('admin_order_detail', order_id=order.id)
+    
+    if request.method == 'POST':
+        form = OrderForm(request.POST, instance=order)
+        if form.is_valid():
+            order = form.save(commit=False)
+            
+            # Получаем товары из POST данных
+            cart_data = request.POST.get('cart_data', '[]')
+            cart_items = json.loads(cart_data)
+            
+            # Возвращаем товары из старой заявки на склад
+            for item in order.items.all():
+                product = item.product
+                product.available_quantity += item.quantity
+                product.save()
+            
+            # Удаляем старые позиции
+            order.items.all().delete()
+            
+            # Проверяем доступность новых товаров
+            for item in cart_items:
+                try:
+                    product = Product.objects.get(id=item['product_id'])
+                    if product.available_quantity < item['quantity']:
+                        messages.error(request, f'Недостаточно товара "{product.name}" на складе. Доступно: {product.available_quantity}')
+                        return render(request, 'rental/admin/edit_order.html', {
+                            'form': form,
+                            'order': order,
+                            'products': Product.objects.filter(available_quantity__gt=0)
+                        })
+                except Product.DoesNotExist:
+                    messages.error(request, 'Один из товаров не найден')
+                    return render(request, 'rental/admin/edit_order.html', {
+                        'form': form,
+                        'order': order,
+                        'products': Product.objects.filter(available_quantity__gt=0)
+                    })
+            
+            # Рассчитываем общую сумму
+            total = 0
+            rental_days = (order.rental_end - order.rental_start).days + 1
+            
+            for item in cart_items:
+                try:
+                    product = Product.objects.get(id=item['product_id'])
+                    total += product.daily_price * item['quantity'] * rental_days
+                except Product.DoesNotExist:
+                    pass
+            
+            order.total_amount = total
+            order.save()
+            
+            # Создаем новые позиции заявки
+            for item in cart_items:
+                try:
+                    product = Product.objects.get(id=item['product_id'])
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        quantity=item['quantity'],
+                        price=product.daily_price * rental_days
+                    )
+                except Product.DoesNotExist:
+                    pass
+            
+            messages.success(request, 'Заявка успешно обновлена!')
+            return redirect('admin_order_detail', order_id=order.id)
+    else:
+        form = OrderForm(instance=order)
+    
+    # Получаем все товары с доступным количеством
+    products = Product.objects.filter(available_quantity__gt=0)
+    
+    # Получаем текущие товары в заявке
+    current_items = []
+    for item in order.items.all():
+        current_items.append({
+            'product_id': item.product.id,
+            'name': item.product.name,
+            'price': item.product.daily_price,
+            'quantity': item.quantity
+        })
+    
+    context = {
+        'form': form,
+        'order': order,
+        'products': products,
+        'current_items': current_items,
+    }
+    return render(request, 'rental/admin/edit_order.html', context)
