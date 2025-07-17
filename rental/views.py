@@ -330,6 +330,15 @@ def order_success(request, order_id):
 def download_order_pdf(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     
+    # Импорты для PDF
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfbase import pdfmetrics
+    import platform
+    
     # Создаем PDF
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, 
@@ -337,12 +346,6 @@ def download_order_pdf(request, order_id):
     
     # Регистрируем русские шрифты
     try:
-        # Пытаемся использовать системные шрифты
-        from reportlab.pdfbase.ttfonts import TTFont
-        from reportlab.pdfbase import pdfmetrics
-        import os
-        import platform
-        
         # Определяем путь к шрифтам в зависимости от ОС
         if platform.system() == "Windows":
             font_paths = [
@@ -387,11 +390,6 @@ def download_order_pdf(request, order_id):
         font_name_bold = 'RussianFont-Bold'
     
     # Стили с русскими шрифтами
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    
     styles = getSampleStyleSheet()
     
     # Создаем собственные стили с русскими шрифтами

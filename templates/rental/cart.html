@@ -38,7 +38,7 @@
                                     <div class="col-md-6">
                                         <div class="price-breakdown">
                                             <div class="small text-muted">
-                                                {{ item.product.daily_price }} сум × {{ item.quantity }} шт. × {{ item.days }} дн.
+                                                {{ item.product.daily_price }} сум × {{ item.quantity }} шт.
                                             </div>
                                             <div class="h5 text-success">
                                                 {{ item.total|floatformat:0 }} сум
@@ -56,9 +56,6 @@
                                     <div>
                                         <button class="btn btn-sm btn-outline-secondary me-2" onclick="editQuantity({{ item.product.id }}, {{ item.quantity }}, {{ item.product.available_quantity }})">
                                             <i class="fas fa-edit"></i> Изменить количество
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" onclick="editDays({{ item.product.id }}, {{ item.days }})">
-                                            <i class="fas fa-calendar"></i> Изменить дни
                                         </button>
                                     </div>
                                 </div>
@@ -79,7 +76,7 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <div>
                                     <small>{{ item.product.name }}</small><br>
-                                    <small class="text-muted">{{ item.quantity }} шт. × {{ item.days }} дн.</small>
+                                    <small class="text-muted">{{ item.quantity }} шт.</small>
                                 </div>
                                 <div class="text-end">
                                     <small>{{ item.total|floatformat:0 }} сум</small>
@@ -91,7 +88,7 @@
                         
                         <div class="d-flex justify-content-between mb-2">
                             <strong>Итого:</strong>
-                            <strong class="text-success h4">{{ total|floatformat:0 }} сум</strong>
+                            <strong class="text-success h4">{{ total|floatformat:0 }} сум / день</strong>
                         </div>
                     </div>
                     
@@ -144,31 +141,6 @@
     </div>
 </div>
 
-<!-- Модальное окно изменения дней -->
-<div class="modal fade" id="editDaysModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Изменить количество дней</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="editDaysForm" method="post">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <input type="hidden" id="editDaysProductId" name="product_id">
-                    <div class="mb-3">
-                        <label for="newDays" class="form-label">Количество дней аренды:</label>
-                        <input type="number" class="form-control" id="newDays" name="days" min="1" max="365" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Обновить</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}

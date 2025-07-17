@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
     <title>{% block title %}Аренда оборудования{% endblock %}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -32,6 +33,18 @@
             font-size: 1.5rem;
             font-weight: bold;
             color: var(--primary-color) !important;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-img {
+            height: 45px;
+            width: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .logo-img:hover {
+            transform: scale(1.05);
         }
 
         .nav-link {
@@ -153,6 +166,14 @@
             .filter-tags {
                 justify-content: center;
             }
+            
+            .logo-img {
+                height: 40px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
@@ -160,7 +181,7 @@
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
             <a class="navbar-brand" href="{% url 'rental:product_list' %}">
-                <i class="fas fa-camera"></i> Аренда оборудования
+                <img src="{% load static %}{% static 'images/logo.png' %}" alt="Логотип" class="logo-img" style="width: 300px">
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">

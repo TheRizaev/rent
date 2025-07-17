@@ -104,12 +104,6 @@
                                 <small class="text-muted">Максимум: {{ product.available_quantity }}</small>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Дней аренды:</label>
-                                <input type="number" id="calcDays" class="form-control form-control-lg text-center" 
-                                       value="{{ request.GET.days|default:1 }}" min="1" max="365" onchange="updateCalculation()">
-                                <small class="text-muted">От 1 до 365 дней</small>
-                            </div>
-                            <div class="col-md-4">
                                 <label class="form-label fw-bold">Итоговая стоимость:</label>
                                 <div class="bg-success text-white rounded p-3 text-center">
                                     <div class="fs-4 fw-bold" id="calculatedTotal">{{ product.daily_price }} сум</div>
@@ -127,7 +121,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted">Расчет:</span>
                                 <span class="small" id="calculationBreakdown">
-                                    {{ product.daily_price }} сум × <span id="quantityDisplay">1</span> шт. × <span id="daysDisplay">{{ request.GET.days|default:1 }}</span> дн.
+                                    {{ product.daily_price }} сум × <span id="quantityDisplay">1</span> шт.
                                 </span>
                             </div>
                             
@@ -154,12 +148,6 @@
                                         <input type="number" name="quantity" id="quantity" 
                                                class="form-control form-control-lg text-center" 
                                                value="1" min="1" max="{{ product.available_quantity }}">
-                                    </div>
-                                    <div class="col-6">
-                                        <label for="days" class="form-label fw-bold">Дней аренды:</label>
-                                        <input type="number" name="days" id="days" 
-                                               class="form-control form-control-lg text-center" 
-                                               value="{{ request.GET.days|default:1 }}" min="1" max="365">
                                     </div>
                                     <div class="col-12">
                                         <button type="submit" class="btn btn-primary btn-lg w-100 py-3">
