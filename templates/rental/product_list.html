@@ -125,12 +125,12 @@
                                        value="1" min="1" max="{{ product.available_quantity }}" 
                                        id="qty-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
                             </div>
-                            <div class="col-6">
+                         <!--   <div class="col-6">
                                 <label class="form-label small fw-bold">Дней:</label>
                                 <input type="number" name="days" class="form-control form-control-sm" 
                                        value="{{ request.GET.days|default:1 }}" min="1" max="365" 
                                        id="days-{{ product.id }}" onchange="updateProductPrice({{ product.id }}, {{ product.daily_price }})">
-                            </div>
+                            </div>-->
                         </div>
                         
                         <!-- Расчет стоимости -->
@@ -138,12 +138,12 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold text-success fs-5">{{ product.daily_price }} сум/день</span>
                             </div>
-                            <small class="text-primary d-block mt-1" id="calc-{{ product.id }}">
+                         <!--   <small class="text-primary d-block mt-1" id="calc-{{ product.id }}">
                                 {% with days=request.GET.days|default:1 %}
                                     {{ product.daily_price|floatformat:0 }} × 1 × {{ days }} = 
                                     <strong class="text-success">{{ product.daily_price|mul:days|floatformat:0 }} сум</strong>
                                 {% endwith %}
-                            </small>
+                            </small>-->
                             
                             <!-- Информация о скидке -->
                             <div id="discount-{{ product.id }}" class="mt-1" style="display: none;">

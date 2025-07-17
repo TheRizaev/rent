@@ -50,6 +50,12 @@
                             {% endif %}
                         </div>
                         <div class="col-12">
+                            <div class="alert alert-info" id="rentalDaysInfo" style="display: none;">
+                                <i class="fas fa-calendar-alt"></i> 
+                                Период аренды: <strong id="rentalDaysCount">0</strong> дней
+                            </div>
+                        </div>
+                        <div class="col-12">
                             <label for="{{ form.comment.id_for_label }}" class="form-label">Комментарий</label>
                             {{ form.comment }}
                             {% if form.comment.errors %}
@@ -74,28 +80,231 @@
             <div class="card-body">
                 <h5 class="card-title">Ваш заказ</h5>
                 
-                {% for item in cart_items %}
-                    <div class="mb-3 p-3 border rounded">
-                        <div class="d-flex justify-content-between mb-1">
-                            <strong>{{ item.product.name }}</strong>
-                            <span class="text-success fw-bold">{{ item.total|floatformat:0 }} сум</span>
-                        </div>
-                        <small class="text-muted">
-                            Арт. {{ item.product.article }}<br>
-                            {{ item.product.daily_price }} сум/день × {{ item.quantity }} шт. × {{ item.days }} дн.
-                        </small>
+                <!-- Сохраняем данные о товарах для JavaScript -->
+                <div id="cartData" style="display: none;">
+                    {% for item in cart_items %}
+                    <div class="cart-item-data" 
+                         data-product-id="{{ item.product.id }}"
+                         data-product-name="{{ item.product.name }}"
+                         data-product-article="{{ item.product.article }}"
+                         data-daily-price="{{ item.product.daily_price }}"
+                         data-quantity="{{ item.quantity }}">
                     </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
+                
+                <div id="orderSummary">
+                    {% for item in cart_items %}
+                        <div class="mb-3 p-3 border rounded cart-item" data-product-id="{{ item.product.id }}">
+                            <div class="d-flex justify-content-between mb-1">
+                                <strong>{{ item.product.name }}</strong>
+                                <span class="text-success fw-bold item-total">{{ item.product.daily_price }} сум</span>
+                            </div>
+                            <small class="text-muted">
+                                Арт. {{ item.product.article }}<br>
+                                <span class="item-calculation">{{ item.product.daily_price }} сум/день × {{ item.quantity }} шт.</span>
+                            </small>
+                        </div>
+                    {% endfor %}
+                </div>
                 
                 <div class="mt-3">
                     <hr>
-                    <div class="d-flex justify-content-between">
-                        <strong>Итого:</strong>
-                        <strong class="text-success h4">{{ total|floatformat:0 }} сум</strong>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Сумма за день:</strong>
+                        <span class="h5 text-muted" id="dailyTotal">{{ total|floatformat:0 }} сум</span>
                     </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>Итого за весь период:</strong>
+                        <strong class="text-success h4" id="grandTotal">{{ total|floatformat:0 }} сум</strong>
+                    </div>
+                    <small class="text-muted d-block mt-1" id="totalCalculation">
+                        Выберите даты аренды для расчета итоговой суммы
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* Дополнительные стили для checkout */
+#rentalDaysInfo {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
+    color: #0d47a1;
+}
+
+.cart-item {
+    transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+    background-color: #f8f9fa;
+}
+
+#grandTotal {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.form-control[type="date"] {
+    cursor: pointer;
+}
+
+.form-control[type="date"]:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Глобальные переменные для хранения данных о товарах
+let cartItems = [];
+let dailyTotal = 0;
+
+// Инициализация данных о товарах из скрытого блока
+document.addEventListener('DOMContentLoaded', function() {
+    // Собираем данные о товарах
+    document.querySelectorAll('.cart-item-data').forEach(function(element) {
+        cartItems.push({
+            productId: element.dataset.productId,
+            productName: element.dataset.productName,
+            productArticle: element.dataset.productArticle,
+            dailyPrice: parseFloat(element.dataset.dailyPrice),
+            quantity: parseInt(element.dataset.quantity)
+        });
+    });
+    
+    // Рассчитываем общую сумму за день
+    dailyTotal = cartItems.reduce((sum, item) => sum + (item.dailyPrice * item.quantity), 0);
+    document.getElementById('dailyTotal').textContent = dailyTotal.toFixed(0) + ' сум';
+    
+    // Добавляем обработчики событий на изменение дат
+    const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
+    const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
+    
+    if (startDateInput && endDateInput) {
+        startDateInput.addEventListener('change', calculateRentalDays);
+        endDateInput.addEventListener('change', calculateRentalDays);
+        
+        // Устанавливаем минимальную дату - сегодня
+        const today = new Date().toISOString().split('T')[0];
+        startDateInput.setAttribute('min', today);
+        
+        // При изменении даты начала, обновляем минимальную дату окончания
+        startDateInput.addEventListener('change', function() {
+            if (this.value) {
+                endDateInput.setAttribute('min', this.value);
+                // Если дата окончания меньше даты начала, сбрасываем её
+                if (endDateInput.value && endDateInput.value < this.value) {
+                    endDateInput.value = this.value;
+                }
+            }
+        });
+    }
+    
+    // Если даты уже выбраны (например, при возврате с ошибкой валидации), рассчитываем
+    if (startDateInput.value && endDateInput.value) {
+        calculateRentalDays();
+    }
+});
+
+function calculateRentalDays() {
+    const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
+    const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
+    
+    if (!startDateInput.value || !endDateInput.value) {
+        // Если даты не выбраны, скрываем информацию
+        document.getElementById('rentalDaysInfo').style.display = 'none';
+        document.getElementById('grandTotal').textContent = dailyTotal.toFixed(0) + ' сум';
+        document.getElementById('totalCalculation').textContent = 'Выберите даты аренды для расчета итоговой суммы';
+        
+        // Обновляем отображение товаров
+        updateItemsDisplay(1);
+        return;
+    }
+    
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    
+    // Рассчитываем количество дней (включая первый и последний день)
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+    
+    if (daysDiff < 1) {
+        alert('Дата окончания должна быть позже или равна дате начала');
+        endDateInput.value = startDateInput.value;
+        return;
+    }
+    
+    // Показываем количество дней
+    document.getElementById('rentalDaysCount').textContent = daysDiff;
+    document.getElementById('rentalDaysInfo').style.display = 'block';
+    
+    // Рассчитываем итоговую сумму
+    const grandTotal = dailyTotal * daysDiff;
+    
+    // Обновляем отображение
+    document.getElementById('grandTotal').textContent = grandTotal.toFixed(0) + ' сум';
+    document.getElementById('totalCalculation').innerHTML = `
+        <i class="fas fa-calculator text-primary"></i> 
+        ${dailyTotal.toFixed(0)} сум/день × ${daysDiff} дней = <strong>${grandTotal.toFixed(0)} сум</strong>
+    `;
+    
+    // Обновляем отображение каждого товара
+    updateItemsDisplay(daysDiff);
+    
+    // Добавляем анимацию для привлечения внимания
+    const grandTotalElement = document.getElementById('grandTotal');
+    grandTotalElement.style.transition = 'all 0.3s ease';
+    grandTotalElement.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+        grandTotalElement.style.transform = 'scale(1)';
+    }, 300);
+}
+
+function updateItemsDisplay(days) {
+    cartItems.forEach(item => {
+        const itemElement = document.querySelector(`.cart-item[data-product-id="${item.productId}"]`);
+        if (itemElement) {
+            const totalPrice = item.dailyPrice * item.quantity * days;
+            
+            // Обновляем отображение цены
+            itemElement.querySelector('.item-total').textContent = totalPrice.toFixed(0) + ' сум';
+            
+            // Обновляем расчет
+            const calculation = itemElement.querySelector('.item-calculation');
+            if (days > 1) {
+                calculation.innerHTML = `${item.dailyPrice} сум/день × ${item.quantity} шт. × ${days} дн.`;
+            } else {
+                calculation.innerHTML = `${item.dailyPrice} сум/день × ${item.quantity} шт.`;
+            }
+        }
+    });
+}
+
+// Форматирование даты для отображения
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    return date.toLocaleDateString('ru-RU', options);
+}
+
+// Подсказки при наведении
+document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
+    const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
+    
+    if (startDateInput) {
+        startDateInput.setAttribute('title', 'Выберите дату начала аренды');
+    }
+    
+    if (endDateInput) {
+        endDateInput.setAttribute('title', 'Выберите дату окончания аренды');
+    }
+});
+</script>
 {% endblock %}

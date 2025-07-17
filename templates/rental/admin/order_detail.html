@@ -156,7 +156,7 @@
                             <select name="status" class="form-select" id="orderStatus">
                                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
                                 <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
+                                {% comment %} <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option> {% endcomment %}
                                 <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
                             </select>
                         </div>
