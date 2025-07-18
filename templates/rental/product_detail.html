@@ -4,38 +4,44 @@
 {% block title %}{{ product.name }} - Аренда оборудования{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'rental:product_list' %}" class="text-decoration-none">Каталог</a></li>
+            <li class="breadcrumb-item active">{{ product.get_display_name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
         <!-- Изображение товара -->
         <div class="col-lg-6">
             <div class="product-gallery">
                 {% if product.photo %}
-                    <div class="main-image-container position-relative">
-                        <img src="{{ product.photo.url }}" class="img-fluid rounded-3 shadow-lg main-product-image" alt="{{ product.name }}" id="mainImage">
-                        
-                        <!-- Увеличение изображения -->
-                        <button class="btn btn-light btn-sm position-absolute top-0 end-0 m-3" 
-                                onclick="openImageModal()" title="Увеличить изображение">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
+                    <div class="main-image-container position-relative mb-3">
+                        <img src="{{ product.photo.url }}" class="img-fluid rounded main-product-image" alt="{{ product.name }}" id="mainImage">
                         
                         <!-- Статус наличия -->
                         <div class="position-absolute top-0 start-0 m-3">
                             {% if product.available_quantity <= 0 %}
                                 <span class="badge bg-danger fs-6 px-3 py-2">Нет в наличии</span>
                             {% elif product.available_quantity <= 3 %}
-                                <span class="badge bg-warning fs-6 px-3 py-2">Осталось: {{ product.available_quantity }} шт.</span>
+                                <span class="badge bg-warning text-dark fs-6 px-3 py-2">Осталось {{ product.available_quantity }} шт.</span>
                             {% else %}
-                                <span class="badge bg-success fs-6 px-3 py-2">В наличии: {{ product.available_quantity }} шт.</span>
+                                <span class="badge bg-success fs-6 px-3 py-2">В наличии</span>
                             {% endif %}
                         </div>
+                        
+                        <!-- Кнопка увеличения -->
+                        <button class="btn btn-light btn-sm position-absolute top-0 end-0 m-3" 
+                                onclick="openImageModal()" title="Увеличить изображение">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
                     </div>
                 {% else %}
-                    <div class="no-image-placeholder rounded-3 shadow-lg d-flex align-items-center justify-content-center">
+                    <div class="no-image-placeholder rounded mb-3 d-flex align-items-center justify-content-center">
                         <div class="text-center text-white">
-                            <i class="fas fa-camera fa-5x mb-3 opacity-75"></i>
-                            <h4>Фото скоро появится</h4>
-                            <p class="mb-0">Изображение товара будет добавлено в ближайшее время</p>
+                            <i class="fas fa-camera fa-4x mb-3 opacity-75"></i>
+                            <h5>Фото скоро появится</h5>
                         </div>
                     </div>
                 {% endif %}
@@ -45,33 +51,43 @@
         <!-- Информация о товаре -->
         <div class="col-lg-6">
             <div class="product-info">
-                <!-- Заголовок и артикул -->
-                <div class="mb-4">
-                    <h1 class="display-5 fw-bold text-dark mb-2">{{ product.get_display_name }}</h1>
-                    <p class="text-muted fs-5">
-                        <i class="fas fa-barcode"></i> Артикул: <code class="fs-6">{{ product.article }}</code>
-                    </p>
+                <!-- Заголовок -->
+                <h1 class="h2 fw-bold text-dark mb-3">{{ product.get_display_name }}</h1>
+                
+                <!-- Артикул -->
+                <p class="text-muted mb-4">
+                    <i class="fas fa-barcode me-2"></i>Артикул: <span class="fw-bold">{{ product.article }}</span>
+                </p>
+                
+                <!-- Цена -->
+                <div class="price-section mb-4 p-4 bg-light rounded">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="text-primary mb-0">{{ product.daily_price }} сум <small class="text-muted fs-6">/ день</small></h3>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <small class="text-muted">за единицу товара</small>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Описание -->
                 {% if product.description %}
                     <div class="mb-4">
-                        <h5 class="fw-bold text-dark mb-3">
-                            <i class="fas fa-info-circle text-primary"></i> Описание
-                        </h5>
-                        <p class="lead text-muted">{{ product.get_display_description }}</p>
+                        <h5 class="fw-bold mb-3">Описание</h5>
+                        <p class="text-muted">{{ product.get_display_description }}</p>
                     </div>
                 {% endif %}
                 
                 <!-- Теги -->
                 {% if product.tags.exists %}
                     <div class="mb-4">
-                        <h6 class="fw-bold text-dark mb-3">
-                            <i class="fas fa-tags text-primary"></i> Категории
-                        </h6>
+                        <h6 class="fw-bold mb-3">Категории</h6>
                         <div class="d-flex flex-wrap gap-2">
                             {% for tag in product.tags.all %}
-                                <span class="badge bg-light text-dark border px-3 py-2">{{ tag.get_display_name }}</span>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark border px-3 py-2">
+                                    <i class="fas fa-tag me-1"></i>{{ tag.get_display_name }}
+                                </span>
                             {% endfor %}
                         </div>
                     </div>
@@ -79,108 +95,68 @@
                 
                 <!-- Место хранения -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-dark mb-3">
-                        <i class="fas fa-map-marker-alt text-primary"></i> Место хранения
-                    </h6>
-                    <div class="d-inline-flex align-items-center bg-light rounded-pill px-4 py-2">
-                        <i class="fas fa-warehouse text-primary me-2"></i>
+                    <h6 class="fw-bold mb-3">Место хранения</h6>
+                    <div class="d-inline-flex align-items-center bg-info bg-opacity-10 text-info rounded px-3 py-2">
+                        <i class="fas fa-map-marker-alt me-2"></i>
                         <span class="fw-bold">{{ product.shelf }}</span>
-                    </div>
-                </div>
-                
-                <!-- Калькулятор стоимости -->
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-gradient text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-calculator"></i> Калькулятор стоимости аренды
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Количество:</label>
-                                <input type="number" id="calcQuantity" class="form-control form-control-lg text-center" 
-                                       value="1" min="1" max="{{ product.available_quantity }}" onchange="updateCalculation()">
-                                <small class="text-muted">Максимум: {{ product.available_quantity }}</small>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Итоговая стоимость:</label>
-                                <div class="bg-success text-white rounded p-3 text-center">
-                                    <div class="fs-4 fw-bold" id="calculatedTotal">{{ product.daily_price }} сум</div>
-                                    <small>за весь период</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Детали расчета -->
-                        <div class="calculation-details">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">Цена за день:</span>
-                                <span class="fw-bold">{{ product.daily_price }} сум</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">Расчет:</span>
-                                <span class="small" id="calculationBreakdown">
-                                    {{ product.daily_price }} сум × <span id="quantityDisplay">1</span> шт.
-                                </span>
-                            </div>
-                            
-                            <!-- Информация о скидках -->
-                            <div id="discountInfo" class="alert alert-success d-none">
-                                <i class="fas fa-percent"></i> <span id="discountText"></span>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
                 <!-- Форма добавления в корзину -->
                 {% if product.available_quantity > 0 %}
-                    <form method="post" action="{% url 'rental:add_to_cart' product.id %}" class="mb-4">
-                        {% csrf_token %}
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="fw-bold text-dark mb-3">
-                                    <i class="fas fa-cart-plus text-primary"></i> Добавить в корзину
-                                </h5>
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <label for="quantity" class="form-label fw-bold">Количество:</label>
+                    <div class="add-to-cart-section">
+                        <form method="post" action="{% url 'rental:add_to_cart' product.id %}" id="addToCartForm">
+                            {% csrf_token %}
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label for="quantity" class="form-label fw-bold">Количество</label>
+                                    <div class="input-group">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="changeQuantity(-1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
                                         <input type="number" name="quantity" id="quantity" 
-                                               class="form-control form-control-lg text-center" 
+                                               class="form-control text-center" 
                                                value="1" min="1" max="{{ product.available_quantity }}">
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3">
-                                            <i class="fas fa-cart-plus me-2"></i>
-                                            Добавить в корзину
+                                        <button type="button" class="btn btn-outline-secondary" onclick="changeQuantity(1)">
+                                            <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
+                                    <small class="text-muted">Максимум: {{ product.available_quantity }} шт.</small>
+                                </div>
+                                <div class="col-md-8">
+                                    <button type="submit" class="btn btn-info btn-lg w-100 text-white">
+                                        <i class="fas fa-cart-plus me-2"></i>
+                                        Добавить в корзину
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- Калькулятор стоимости -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <span class="text-muted">Стоимость за выбранное количество:</span>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <span class="h5 text-success mb-0" id="totalPrice">{{ product.daily_price }} сум</span>
+                                    <small class="text-muted d-block">за день</small>
                                 </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 {% else %}
-                    <div class="alert alert-warning border-0 shadow-sm">
+                    <div class="alert alert-warning border-0">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
                             <div>
-                                <h5 class="mb-1">Товар временно недоступен</h5>
-                                <p class="mb-0">Этот товар сейчас отсутствует на складе. Попробуйте позже или выберите похожий товар.</p>
+                                <h6 class="mb-1">Товар временно недоступен</h6>
+                                <p class="mb-0">Этот товар сейчас отсутствует на складе.</p>
                             </div>
                         </div>
                     </div>
                 {% endif %}
                 
-                <!-- Дополнительные действия -->
-                <div class="d-flex gap-3">
-                    <a href="{% url 'rental:product_list' %}?days={{ request.GET.days|default:1 }}" 
-                       class="btn btn-outline-secondary btn-lg flex-fill">
-                        <i class="fas fa-arrow-left"></i> Вернуться к каталогу
-                    </a>
-                    <button class="btn btn-outline-info btn-lg" onclick="shareProduct()" title="Поделиться товаром">
-                        <i class="fas fa-share-alt"></i>
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -204,7 +180,7 @@
 </div>
 
 <style>
-/* Стили для страницы товара */
+/* Стили для более естественного дизайна */
 .product-gallery .main-image-container {
     max-height: 500px;
     overflow: hidden;
@@ -212,9 +188,11 @@
 
 .main-product-image {
     width: 100%;
-    height: 500px;
-    object-fit: cover;
+    height: 400px;
+    object-fit: contain;
+    background-color: #f8f9fa;
     transition: transform 0.3s ease;
+    border: 1px solid #e9ecef;
 }
 
 .main-product-image:hover {
@@ -222,83 +200,85 @@
 }
 
 .no-image-placeholder {
-    height: 500px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 400px;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    border: 1px solid #e9ecef;
 }
 
-.product-info {
-    padding-left: 2rem;
+.price-section {
+    border-left: 4px solid #0dcaf0;
 }
 
-.bg-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.calculation-details {
-    background-color: #f8f9fa;
+.add-to-cart-section {
+    border: 2px solid #e9ecef;
     border-radius: 10px;
-    padding: 1rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
 }
 
-.form-control:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    font-weight: 500;
+.btn-info {
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
     transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+.btn-info:hover {
+    background-color: #0bb5d3;
+    border-color: #0bb5d3;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(13, 202, 240, 0.3);
+}
+
+.input-group .btn {
+    border-color: #ced4da;
+}
+
+.input-group .form-control:focus {
+    border-color: #0dcaf0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25);
 }
 
 .badge {
     font-weight: 500;
-    font-size: 0.9rem;
 }
 
-.card {
-    border-radius: 15px;
-    transition: transform 0.3s ease;
+.breadcrumb {
+    background: none;
+    padding: 0;
 }
 
-.card:hover {
-    transform: translateY(-2px);
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
 }
 
 /* Анимации */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.btn-primary:active {
+.btn-info:active {
     animation: pulse 0.3s ease;
 }
 
-/* Адаптивность */
-@media (max-width: 991px) {
-    .product-info {
-        padding-left: 0;
-        margin-top: 2rem;
-    }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
 }
 
+/* Адаптивность */
 @media (max-width: 768px) {
     .main-product-image,
     .no-image-placeholder {
         height: 300px;
     }
     
-    .display-5 {
-        font-size: 2rem;
+    .h2 {
+        font-size: 1.5rem;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
     }
 }
 </style>
@@ -307,64 +287,27 @@
 {% block extra_js %}
 <script>
 const dailyPrice = {{ product.daily_price }};
+const maxQuantity = {{ product.available_quantity }};
 
-function updateCalculation() {
-    const quantity = parseInt(document.getElementById('calcQuantity').value) || 1;
-    const days = parseInt(document.getElementById('calcDays').value) || 1;
+// Изменение количества кнопками +/-
+function changeQuantity(delta) {
+    const quantityInput = document.getElementById('quantity');
+    let currentQuantity = parseInt(quantityInput.value) || 1;
+    let newQuantity = currentQuantity + delta;
     
-    // Обновляем отображение
-    document.getElementById('quantityDisplay').textContent = quantity;
-    document.getElementById('daysDisplay').textContent = days;
+    if (newQuantity < 1) newQuantity = 1;
+    if (newQuantity > maxQuantity) newQuantity = maxQuantity;
     
-    // Рассчитываем базовую стоимость
-    const baseTotal = dailyPrice * quantity * days;
-    
-    // Рассчитываем скидку
-    let discount = 0;
-    let discountText = '';
-    
-    if (days >= 30) {
-        discount = 15;
-        discountText = '🎉 Скидка 15% за аренду от 30 дней!';
-    } else if (days >= 14) {
-        discount = 10;
-        discountText = '🎉 Скидка 10% за аренду от 14 дней!';
-    } else if (days >= 7) {
-        discount = 5;
-        discountText = '🎉 Скидка 5% за аренду от 7 дней!';
-    }
-    
-    const finalTotal = discount > 0 ? baseTotal * (1 - discount / 100) : baseTotal;
-    
-    // Обновляем отображение
-    document.getElementById('calculatedTotal').textContent = finalTotal.toFixed(0) + ' сум';
-    
-    // Показываем информацию о скидке
-    const discountInfo = document.getElementById('discountInfo');
-    const discountTextEl = document.getElementById('discountText');
-    
-    if (discount > 0) {
-        discountTextEl.innerHTML = `${discountText}<br><small>Экономия: <strong>${(baseTotal - finalTotal).toFixed(0)} сум</strong></small>`;
-        discountInfo.classList.remove('d-none');
-    } else {
-        discountInfo.classList.add('d-none');
-    }
-    
-    // Синхронизируем с формой
-    document.getElementById('quantity').value = quantity;
-    document.getElementById('days').value = days;
+    quantityInput.value = newQuantity;
+    updateTotalPrice();
 }
 
-// Синхронизируем изменения в форме с калькулятором
-document.getElementById('quantity').addEventListener('input', function() {
-    document.getElementById('calcQuantity').value = this.value;
-    updateCalculation();
-});
-
-document.getElementById('days').addEventListener('input', function() {
-    document.getElementById('calcDays').value = this.value;
-    updateCalculation();
-});
+// Обновление общей стоимости
+function updateTotalPrice() {
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    const total = dailyPrice * quantity;
+    document.getElementById('totalPrice').textContent = total.toLocaleString() + ' сум';
+}
 
 // Открытие модального окна с изображением
 function openImageModal() {
@@ -382,11 +325,9 @@ function shareProduct() {
             url: window.location.href
         }).catch(console.error);
     } else {
-        // Fallback - копируем ссылку в буфер обмена
         navigator.clipboard.writeText(window.location.href).then(() => {
             showNotification('Ссылка скопирована в буфер обмена!', 'success');
         }).catch(() => {
-            // Если не удалось скопировать, показываем ссылку
             prompt('Скопируйте эту ссылку:', window.location.href);
         });
     }
@@ -413,7 +354,7 @@ function showNotification(message, type = 'success') {
 }
 
 // AJAX отправка формы
-document.querySelector('form[action*="add-to-cart"]')?.addEventListener('submit', function(e) {
+document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
@@ -421,7 +362,7 @@ document.querySelector('form[action*="add-to-cart"]')?.addEventListener('submit'
     const originalText = submitButton.innerHTML;
     
     submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Добавляем в корзину...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Добавляем...';
     
     fetch(this.action, {
         method: 'POST',
@@ -432,8 +373,8 @@ document.querySelector('form[action*="add-to-cart"]')?.addEventListener('submit'
     })
     .then(response => {
         if (response.ok) {
-            submitButton.innerHTML = '<i class="fas fa-check me-2"></i>Добавлено в корзину!';
-            submitButton.className = submitButton.className.replace('btn-primary', 'btn-success');
+            submitButton.innerHTML = '<i class="fas fa-check me-2"></i>Добавлено!';
+            submitButton.className = submitButton.className.replace('btn-info', 'btn-success');
             
             showNotification('Товар успешно добавлен в корзину!', 'success');
             
@@ -442,7 +383,7 @@ document.querySelector('form[action*="add-to-cart"]')?.addEventListener('submit'
             
             setTimeout(() => {
                 submitButton.innerHTML = originalText;
-                submitButton.className = submitButton.className.replace('btn-success', 'btn-primary');
+                submitButton.className = submitButton.className.replace('btn-success', 'btn-info');
                 submitButton.disabled = false;
             }, 2000);
         } else {
@@ -452,13 +393,13 @@ document.querySelector('form[action*="add-to-cart"]')?.addEventListener('submit'
     .catch(error => {
         console.error('Error:', error);
         submitButton.innerHTML = '<i class="fas fa-times me-2"></i>Ошибка';
-        submitButton.className = submitButton.className.replace('btn-primary', 'btn-danger');
+        submitButton.className = submitButton.className.replace('btn-info', 'btn-danger');
         
         showNotification('Ошибка при добавлении товара', 'error');
         
         setTimeout(() => {
             submitButton.innerHTML = originalText;
-            submitButton.className = submitButton.className.replace('btn-danger', 'btn-primary');
+            submitButton.className = submitButton.className.replace('btn-danger', 'btn-info');
             submitButton.disabled = false;
         }, 2000);
     });
@@ -478,9 +419,13 @@ function updateCartCounter() {
     .catch(error => console.error('Error updating cart counter:', error));
 }
 
-// Инициализация
+// Обработчики событий
 document.addEventListener('DOMContentLoaded', function() {
-    updateCalculation();
+    // Обновляем цену при изменении количества
+    document.getElementById('quantity')?.addEventListener('input', updateTotalPrice);
+    
+    // Инициализируем цену
+    updateTotalPrice();
 });
 </script>
 {% endblock %}
