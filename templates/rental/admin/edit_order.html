@@ -88,7 +88,7 @@
                 <hr>
                 <div class="d-flex justify-content-between">
                     <strong>Итого:</strong>
-                    <strong id="totalAmount">{{ order.total_amount }} сум</strong>
+                    <strong id="totalAmount">{{ order.total_amount|default:0 }} сум</strong>
                 </div>
                 <button type="button" class="btn btn-primary w-100 mt-3" onclick="submitOrder()" id="submitBtn">
                     <i class="fas fa-save"></i> Сохранить изменения
@@ -162,11 +162,24 @@
 
 {% block extra_js %}
 <script>
+// Функция для форматирования цены
+function formatPrice(price) {
+    return Math.round(price).toLocaleString('ru-RU').replace(/,/g, '.');
+}
+
 // Загружаем текущие товары из заявки
-let cart = {{ current_items|safe }};
+let cart = [];
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    // Преобразуем данные из шаблона в правильный формат
+    const currentItems = {{ current_items|safe }};
+    cart = currentItems.map(item => ({
+        product_id: item.product_id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+    }));
     updateCartDisplay();
 });
 
@@ -228,10 +241,10 @@ function updateCartDisplay() {
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
                     <strong>${item.name}</strong><br>
-                    <small>${item.quantity} x ${item.price} сум</small>
+                    <small>${item.quantity} x ${formatPrice(item.price)} сум</small>
                 </div>
                 <div>
-                    <strong>${itemTotal} сум</strong>
+                    <strong>${formatPrice(itemTotal)} сум</strong>
                     <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(${item.product_id})">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -241,7 +254,7 @@ function updateCartDisplay() {
     });
     
     cartItems.innerHTML = html;
-    totalAmount.textContent = `${total} сум`;
+    totalAmount.textContent = `${formatPrice(total)} сум`;
     
     // Обновляем скрытое поле с данными корзины
     document.getElementById('cartData').value = JSON.stringify(cart);

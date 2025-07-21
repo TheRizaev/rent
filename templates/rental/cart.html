@@ -30,7 +30,7 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="card-text">
-                                            <strong>Цена:</strong> {{ item.product.daily_price }} сум/день<br>
+                                            <strong>Цена:</strong> {{ item.product.daily_price|format_price }} сум/день<br>
                                             <strong>Количество:</strong> {{ item.quantity }} шт.<br>
                                             <strong>Дней в аренде:</strong> {{ item.days }}
                                         </p>

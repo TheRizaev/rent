@@ -1,4 +1,5 @@
 from django import template
+from decimal import Decimal
 
 register = template.Library()
 
@@ -55,3 +56,24 @@ def add(value, arg):
     except (ValueError, TypeError):
         return 0
     
+@register.filter
+def format_price(value):
+    """Форматирует цену с разделителями тысяч"""
+    if value is None:
+        return "0"
+    
+    try:
+        # Преобразуем в число
+        if isinstance(value, str):
+            value = float(value)
+        elif isinstance(value, Decimal):
+            value = float(value)
+        
+        # Убираем дробную часть если она .00
+        if value == int(value):
+            value = int(value)
+            return f"{value:,}".replace(",", ".")
+        else:
+            return f"{value:,.2f}".replace(",", ".")
+    except (ValueError, TypeError):
+        return str(value)

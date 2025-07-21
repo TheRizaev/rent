@@ -695,7 +695,7 @@ def edit_order(request, order_id):
                             'form': form,
                             'order': order,
                             'products': Product.objects.filter(available_quantity__gt=0),
-                            'current_items': current_items
+                            'current_items': []
                         })
                 except Product.DoesNotExist:
                     messages.error(request, 'Один из товаров не найден')
@@ -703,7 +703,7 @@ def edit_order(request, order_id):
                         'form': form,
                         'order': order,
                         'products': Product.objects.filter(available_quantity__gt=0),
-                        'current_items': current_items
+                        'current_items': []
                     })
             
             # Рассчитываем общую сумму
@@ -748,7 +748,7 @@ def edit_order(request, order_id):
         current_items.append({
             'product_id': item.product.id,
             'name': item.product.get_display_name(),
-            'price': item.product.daily_price,
+            'price': float(item.product.daily_price),
             'quantity': item.quantity
         })
         

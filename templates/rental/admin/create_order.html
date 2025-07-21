@@ -156,6 +156,10 @@
 <script>
 let cart = [];
 
+function formatPrice(price) {
+    return Math.round(price).toLocaleString('ru-RU').replace(/,/g, '.');
+}
+
 function addToCart(productId) {
     const row = document.querySelector(`tr[data-product-id="${productId}"]`);
     const productName = row.dataset.productName;

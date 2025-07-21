@@ -76,7 +76,7 @@
                             {% endif %}
                         </td>
                         <td>{{ product.quantity|add:"-"|add:product.available_quantity }}</td>
-                        <td>{{ product.daily_price }} сум</td>
+                        <td>{{ product.daily_price|format_price }} сум</td>
                         <td>
                             {% if product.available_quantity <= 0 %}
                                 <span class="badge bg-danger">Нет в наличии</span>

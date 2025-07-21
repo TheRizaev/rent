@@ -159,7 +159,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (value === 'completed') {
                         setTimeout(() => {
                             location.reload();
-                        }, 1500);
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
                     }
                 } else {
                     // Показать ошибку и вернуть к оригинальному значению

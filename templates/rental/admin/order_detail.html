@@ -224,16 +224,14 @@ document.getElementById('statusForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Показать уведомление об успехе
             const alert = document.createElement('div');
             alert.className = 'alert alert-success alert-dismissible fade show';
             alert.innerHTML = 'Статус успешно обновлен <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
             document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
             
-            // Обновить страницу через 2 секунды
             setTimeout(() => {
                 location.reload();
-            }, 2000);
+            }, 1000);
         } else {
             // Показать ошибку
             const alert = document.createElement('div');

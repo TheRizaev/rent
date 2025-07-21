@@ -42,7 +42,7 @@ class ProductForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'daily_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'tags': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
             'shelf': forms.Select(attrs={'class': 'form-control'}),
         }
     
@@ -144,3 +144,4 @@ class ShelfForm(forms.ModelForm):
             cleaned_data['number'] = number
         
         return cleaned_data
+    

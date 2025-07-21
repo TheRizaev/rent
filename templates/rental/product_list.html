@@ -414,38 +414,6 @@
             </button>
         </div>
     </form>
-    
-    <!-- Tag Filters -->
-    {% if root_tags %}
-    <div class="filter-section">
-        <label class="form-label fw-bold text-primary mb-3 d-block">
-            <i class="fas fa-tags me-2"></i>
-            Категории товаров
-        </label>
-        <div class="filter-tags">
-            <a href="?" class="tag-btn {% if not selected_tag %}active{% endif %}">
-                <i class="fas fa-th-large me-1"></i>Все товары
-            </a>
-            {% for tag in root_tags %}
-                <a href="?tag={{ tag.id }}" class="tag-btn {% if selected_tag == tag.id|stringformat:'s' %}active{% endif %}">
-                    <i class="fas fa-tag me-1"></i>{{ tag.get_display_name }}
-                </a>
-            {% endfor %}
-        </div>
-        
-        <!-- Sub-categories -->
-        {% if selected_tag_children %}
-        <div class="filter-tags mt-2">
-            <small class="text-muted me-2">Подкатегории:</small>
-            {% for child in selected_tag_children %}
-                <a href="?tag={{ child.id }}" class="tag-btn">
-                    <i class="fas fa-arrow-right me-1"></i>{{ child.get_display_name }}
-                </a>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
 </div>
 
 <!-- Search Results Info -->
@@ -515,7 +483,7 @@
                 <i class="fas fa-hashtag me-1"></i>{{ product.article }}
             </div>
             <div class="product-price">
-                {{ product.daily_price|floatformat:0 }} сум<small class="text-muted">/день</small>
+                {{ product.daily_price|format_price }} сум<small class="text-muted">/день</small>
             </div>
             
             <!-- Actions -->
