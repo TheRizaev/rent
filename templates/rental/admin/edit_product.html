@@ -33,6 +33,28 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="{{ form.barcode.id_for_label }}" class="form-label">Штрих-код</label>
+                        {{ form.barcode }}
+                        {% if form.barcode.errors %}
+                            <div class="text-danger">{{ form.barcode.errors }}</div>
+                        {% endif %}
+                        {% if product.barcode %}
+                            <div class="mt-2">
+                                <img src="{% url 'generate_barcode_image' product.id %}" 
+                                    alt="Штрих-код" 
+                                    style="max-width: 300px;"
+                                    class="img-thumbnail">
+                                <div class="mt-2">
+                                    <a href="{% url 'download_barcode' product.id %}" 
+                                    class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download"></i> Скачать штрих-код
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
                         {% if product.photo %}
                             <div class="mb-2">

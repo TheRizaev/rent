@@ -2,10 +2,17 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from .models import Product, Order, OrderItem, Storage, Shelf, Tag
 from .forms import ProductForm, StorageForm, ShelfForm, OrderForm
 import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from io import BytesIO
+import barcode
+from barcode.writer import ImageWriter
+from PIL import Image
+import qrcode
 
 def is_admin(user):
     return user.is_authenticated and user.is_staff
@@ -749,3 +756,229 @@ def edit_order(request, order_id):
         'current_items': current_items,
     }
     return render(request, 'rental/admin/edit_order.html', context)
+
+@user_passes_test(is_admin)
+def barcode_scanner(request):
+    """Страница сканера штрих-кодов"""
+    return render(request, 'rental/admin/barcode_scanner.html')
+
+@user_passes_test(is_admin)
+@require_http_methods(["POST"])
+def barcode_add_to_cart(request):
+    """API для добавления товара в корзину по штрих-коду"""
+    try:
+        data = json.loads(request.body)
+        barcode_value = data.get('barcode')
+        session_id = data.get('session_id')
+        
+        if not barcode_value:
+            return JsonResponse({'success': False, 'error': 'Штрих-код не указан'})
+        
+        # Ищем товар по штрих-коду
+        try:
+            product = Product.objects.get(barcode=barcode_value)
+        except Product.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Товар с таким штрих-кодом не найден'})
+        
+        # Проверяем доступность
+        if product.available_quantity <= 0:
+            return JsonResponse({'success': False, 'error': 'Товар недоступен'})
+        
+        # Работаем с корзиной в сессии
+        cart_key = f'barcode_cart_{session_id}'
+        cart = request.session.get(cart_key, {})
+        
+        # Добавляем товар в корзину
+        product_id_str = str(product.id)
+        if product_id_str in cart:
+            # Проверяем, не превышаем ли доступное количество
+            if cart[product_id_str]['quantity'] >= product.available_quantity:
+                return JsonResponse({'success': False, 'error': 'Достигнуто максимальное количество'})
+            cart[product_id_str]['quantity'] += 1
+        else:
+            cart[product_id_str] = {
+                'product_id': product.id,
+                'name': product.get_display_name(),
+                'quantity': 1,
+                'price': float(product.daily_price),
+                'barcode': product.barcode
+            }
+        
+        request.session[cart_key] = cart
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'product_name': product.get_display_name(),
+            'cart': cart
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Неверный формат данных'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(is_admin)
+@require_http_methods(["POST"])
+def barcode_remove_from_cart(request):
+    """API для удаления товара из корзины"""
+    try:
+        data = json.loads(request.body)
+        product_id = data.get('product_id')
+        session_id = data.get('session_id')
+        
+        cart_key = f'barcode_cart_{session_id}'
+        cart = request.session.get(cart_key, {})
+        
+        if str(product_id) in cart:
+            del cart[str(product_id)]
+            request.session[cart_key] = cart
+            request.session.modified = True
+            return JsonResponse({'success': True})
+        
+        return JsonResponse({'success': False, 'error': 'Товар не найден в корзине'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(is_admin)
+@require_http_methods(["POST"])
+def barcode_clear_cart(request):
+    """API для очистки корзины"""
+    try:
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        
+        cart_key = f'barcode_cart_{session_id}'
+        request.session[cart_key] = {}
+        request.session.modified = True
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(is_admin)
+def barcode_get_cart(request):
+    """API для получения текущей корзины"""
+    session_id = request.GET.get('session_id')
+    cart_key = f'barcode_cart_{session_id}'
+    cart = request.session.get(cart_key, {})
+    
+    return JsonResponse({'success': True, 'cart': cart})
+
+@user_passes_test(is_admin)
+def generate_barcode_image(request, product_id):
+    """Генерация изображения штрих-кода для товара"""
+    try:
+        product = get_object_or_404(Product, id=product_id)
+        
+        if not product.barcode:
+            return HttpResponse('Штрих-код не найден', status=404)
+        
+        # Генерируем штрих-код
+        EAN = barcode.get_barcode_class('ean13')
+        ean = EAN(product.barcode, writer=ImageWriter())
+        
+        # Настройки для изображения
+        buffer = BytesIO()
+        ean.write(buffer, options={
+            'module_width': 0.2,
+            'module_height': 15.0,
+            'font_size': 10,
+            'text_distance': 5.0,
+            'quiet_zone': 6.5
+        })
+        
+        buffer.seek(0)
+        return HttpResponse(buffer.read(), content_type='image/png')
+        
+    except Exception as e:
+        return HttpResponse(f'Ошибка генерации: {str(e)}', status=500)
+
+@user_passes_test(is_admin)
+def download_barcode(request, product_id):
+    """Скачать штрих-код как изображение"""
+    try:
+        product = get_object_or_404(Product, id=product_id)
+        
+        if not product.barcode:
+            return HttpResponse('Штрих-код не найден', status=404)
+        
+        # Генерируем штрих-код с информацией о товаре
+        EAN = barcode.get_barcode_class('ean13')
+        ean = EAN(product.barcode, writer=ImageWriter())
+        
+        # Создаем изображение
+        buffer = BytesIO()
+        ean.write(buffer, options={
+            'module_width': 0.3,
+            'module_height': 20.0,
+            'font_size': 14,
+            'text_distance': 8.0,
+            'quiet_zone': 10
+        })
+        
+        # Открываем изображение для добавления дополнительной информации
+        buffer.seek(0)
+        img = Image.open(buffer)
+        
+        # Можно добавить название товара и артикул под штрих-кодом
+        # (требует дополнительной работы с PIL)
+        
+        # Сохраняем финальное изображение
+        final_buffer = BytesIO()
+        img.save(final_buffer, format='PNG')
+        final_buffer.seek(0)
+        
+        response = HttpResponse(final_buffer.read(), content_type='image/png')
+        response['Content-Disposition'] = f'attachment; filename="barcode_{product.article}.png"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f'Ошибка: {str(e)}', status=500)
+
+@user_passes_test(is_admin)
+def print_all_barcodes(request):
+    """Страница для печати всех штрих-кодов"""
+    products = Product.objects.filter(available_quantity__gt=0).order_by('shelf', 'name')
+    
+    # Группируем по полкам для удобства
+    products_by_shelf = {}
+    for product in products:
+        shelf_key = str(product.shelf)
+        if shelf_key not in products_by_shelf:
+            products_by_shelf[shelf_key] = []
+        products_by_shelf[shelf_key].append(product)
+    
+    context = {
+        'products_by_shelf': products_by_shelf,
+    }
+    return render(request, 'rental/admin/print_barcodes.html', context)
+
+@user_passes_test(is_admin)
+def barcode_lookup(request):
+    """API для быстрого поиска товара по штрих-коду"""
+    barcode_value = request.GET.get('barcode')
+    
+    if not barcode_value:
+        return JsonResponse({'success': False, 'error': 'Штрих-код не указан'})
+    
+    try:
+        product = Product.objects.get(barcode=barcode_value)
+        return JsonResponse({
+            'success': True,
+            'product': {
+                'id': product.id,
+                'name': product.get_display_name(),
+                'article': product.article,
+                'barcode': product.barcode,
+                'price': float(product.daily_price),
+                'available': product.available_quantity,
+                'shelf': str(product.shelf),
+                'photo_url': product.photo.url if product.photo else None
+            }
+        })
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Товар не найден'})

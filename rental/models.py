@@ -115,6 +115,7 @@ class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     photo = models.ImageField(upload_to='products/', verbose_name='Фото')
     article = models.CharField(max_length=50, unique=True, verbose_name='Артикул', blank=True)
+    barcode = models.CharField(max_length=13, unique=True, verbose_name='Штрих-код', blank=True)  # НОВОЕ ПОЛЕ
     description = models.TextField(blank=True, verbose_name='Описание')
     quantity = models.IntegerField(default=0, verbose_name='Количество')
     available_quantity = models.IntegerField(default=0, verbose_name='Доступное количество')
@@ -126,25 +127,42 @@ class Product(models.Model):
     def generate_unique_article(self):
         """Генерирует уникальный 8-значный артикул"""
         while True:
-            # Генерируем 8-значный номер
             article = ''.join([str(random.randint(0, 9)) for _ in range(8)])
-            
-            # Проверяем, что такой артикул не существует
             if not Product.objects.filter(article=article).exists():
                 return article
+    
+    def generate_ean13_barcode(self):
+        """Генерирует уникальный 13-значный EAN-13 штрих-код"""
+        while True:
+            prefix = "200"
+            main_code = ''.join([str(random.randint(0, 9)) for _ in range(9)])
+            code_without_check = prefix + main_code
+            
+            odd_sum = sum(int(code_without_check[i]) for i in range(0, 12, 2))
+            even_sum = sum(int(code_without_check[i]) for i in range(1, 12, 2))
+            total = odd_sum + (even_sum * 3)
+            check_digit = (10 - (total % 10)) % 10
+            
+            barcode = code_without_check + str(check_digit)
+            
+            if not Product.objects.filter(barcode=barcode).exists():
+                return barcode
     
     def save(self, *args, **kwargs):
         self.name = self.name.strip().lower()
         
-        # Генерируем артикул автоматически, если он не задан
         if not self.article:
             self.article = self.generate_unique_article()
         else:
             self.article = self.article.strip().upper()
         
+        if not self.barcode:
+            self.barcode = self.generate_ean13_barcode()
+        
         if self.description:
             self.description = self.description.strip().lower()
         super().save(*args, **kwargs)
+
     
     def get_display_name(self):
         """Возвращает название с заглавной буквы"""

@@ -30,4 +30,15 @@ urlpatterns = [
     path('tags/', admin_views.tag_management, name='tag_management'),
     path('api/tags/children/', admin_views.get_tag_children, name='get_tag_children'),
     path('api/tags/structure/', admin_views.tag_structure_api, name='tag_structure_api'),
+
+    # Штрих-коды
+    path('barcode-scanner/', admin_views.barcode_scanner, name='barcode_scanner'),
+    path('api/barcode/add-to-cart/', admin_views.barcode_add_to_cart, name='barcode_add_to_cart'),
+    path('api/barcode/remove-from-cart/', admin_views.barcode_remove_from_cart, name='barcode_remove_from_cart'),
+    path('api/barcode/clear-cart/', admin_views.barcode_clear_cart, name='barcode_clear_cart'),
+    path('api/barcode/get-cart/', admin_views.barcode_get_cart, name='barcode_get_cart'),
+    path('api/barcode/lookup/', admin_views.barcode_lookup, name='barcode_lookup'),
+    path('barcode/generate/<int:product_id>/', admin_views.generate_barcode_image, name='generate_barcode_image'),
+    path('barcode/download/<int:product_id>/', admin_views.download_barcode, name='download_barcode'),
+    path('barcodes/print/', admin_views.print_all_barcodes, name='print_all_barcodes'),
 ]

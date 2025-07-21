@@ -31,9 +31,14 @@ class OrderForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'photo', 'description', 'quantity', 'tags', 'daily_price', 'shelf']
+        fields = ['name', 'photo', 'barcode', 'description', 'quantity', 'tags', 'daily_price', 'shelf']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'barcode': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Оставьте пустым для автоматической генерации',
+                'maxlength': '13'
+            }),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'daily_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -47,9 +52,30 @@ class ProductForm(forms.ModelForm):
         if 'article' in self.fields:
             del self.fields['article']
         
+        # Делаем поле штрих-кода необязательным
+        self.fields['barcode'].required = False
+        
         if self.instance and self.instance.pk:
             self.initial['name'] = self.instance.get_display_name()
             self.initial['description'] = self.instance.get_display_description()
+    
+    def clean_barcode(self):
+        barcode = self.cleaned_data.get('barcode')
+        
+        if barcode:
+            # Проверяем, что штрих-код состоит из 13 цифр
+            if not barcode.isdigit() or len(barcode) != 13:
+                raise forms.ValidationError('Штрих-код должен состоять из 13 цифр')
+            
+            # Проверяем уникальность
+            if self.instance.pk:
+                if Product.objects.filter(barcode=barcode).exclude(pk=self.instance.pk).exists():
+                    raise forms.ValidationError('Товар с таким штрих-кодом уже существует')
+            else:
+                if Product.objects.filter(barcode=barcode).exists():
+                    raise forms.ValidationError('Товар с таким штрих-кодом уже существует')
+        
+        return barcode
     
     def save(self, commit=True):
         product = super().save(commit=False)
@@ -59,6 +85,7 @@ class ProductForm(forms.ModelForm):
             product.save()
             self.save_m2m()
         return product
+
 
 class StorageForm(forms.ModelForm):
     class Meta:
