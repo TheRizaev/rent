@@ -1,11 +1,11 @@
-
 from django.urls import path
 from . import views
 
 app_name = 'rental'
 
 urlpatterns = [
-    path('', views.product_list, name='product_list'),
+    path('', views.preview_page, name='preview'),  # Новая preview страница
+    path('catalog/', views.product_list, name='product_list'),
     path('product/<int:product_id>/', views.product_detail, name='product_detail'),
     path('cart/', views.cart_view, name='cart'),
     path('cart-count/', views.cart_count_api, name='cart_count_api'),

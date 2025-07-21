@@ -694,14 +694,16 @@ def edit_order(request, order_id):
                         return render(request, 'rental/admin/edit_order.html', {
                             'form': form,
                             'order': order,
-                            'products': Product.objects.filter(available_quantity__gt=0)
+                            'products': Product.objects.filter(available_quantity__gt=0),
+                            'current_items': current_items
                         })
                 except Product.DoesNotExist:
                     messages.error(request, 'Один из товаров не найден')
                     return render(request, 'rental/admin/edit_order.html', {
                         'form': form,
                         'order': order,
-                        'products': Product.objects.filter(available_quantity__gt=0)
+                        'products': Product.objects.filter(available_quantity__gt=0),
+                        'current_items': current_items
                     })
             
             # Рассчитываем общую сумму
@@ -737,17 +739,25 @@ def edit_order(request, order_id):
         form = OrderForm(instance=order)
     
     # Получаем все товары с доступным количеством
-    products = Product.objects.filter(available_quantity__gt=0)
+    # ИСПРАВЛЕНО: добавляем товары из текущей заявки к доступным
+    all_products = Product.objects.all()
     
     # Получаем текущие товары в заявке
     current_items = []
     for item in order.items.all():
         current_items.append({
             'product_id': item.product.id,
-            'name': item.product.name,
+            'name': item.product.get_display_name(),
             'price': item.product.daily_price,
             'quantity': item.quantity
         })
+        
+        # Временно возвращаем товары на склад для корректного отображения доступности
+        item.product.available_quantity += item.quantity
+        item.product.save()
+    
+    # Фильтруем товары с доступным количеством
+    products = all_products.filter(available_quantity__gt=0)
     
     context = {
         'form': form,

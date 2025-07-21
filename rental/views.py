@@ -21,9 +21,12 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 import os
 
+def preview_page(request):
+    return render(request, 'rental/preview.html')
+
 def product_list(request):
     products = Product.objects.filter(available_quantity__gt=0)
-    root_tags = Tag.objects.filter(parent=None)
+    root_tags = Tag.objects.filter(parent=None).order_by('name')
     
     search_query = request.GET.get('search', '')
     tag_filter = request.GET.get('tag', '')
@@ -51,6 +54,8 @@ def product_list(request):
         except Tag.DoesNotExist:
             pass
     
+    products = products.order_by('name')
+    
     context = {
         'products': products,
         'root_tags': root_tags,
@@ -60,6 +65,7 @@ def product_list(request):
         'search_query': search_query
     }
     return render(request, 'rental/product_list.html', context)
+
 
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)

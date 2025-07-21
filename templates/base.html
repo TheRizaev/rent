@@ -14,6 +14,8 @@
             --accent-color: #3498db;
             --background-color: #f8f9fa;
             --text-color: #2c3e50;
+            --sidebar-width: 320px;
+            --header-height: 80px;
         }
 
         body {
@@ -23,16 +25,23 @@
             line-height: 1.6;
         }
 
+        /* Header */
         .navbar {
             background-color: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 1rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: var(--header-height);
         }
 
         .navbar-brand {
+            color: var(--primary-color) !important;
             font-size: 1.5rem;
             font-weight: bold;
-            color: var(--primary-color) !important;
             display: flex;
             align-items: center;
         }
@@ -47,14 +56,257 @@
             transform: scale(1.05);
         }
 
-        .nav-link {
-            color: var(--text-color) !important;
-            font-weight: 500;
-            transition: color 0.3s ease;
+        /* Navigation Controls */
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
-        .nav-link:hover {
-            color: var(--accent-color) !important;
+        .mobile-menu-toggle {
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .catalog-toggle, .cart-btn, .admin-btn {
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            text-decoration: none;
+        }
+
+        .catalog-toggle:hover, .cart-btn:hover, .admin-btn:hover {
+            background: #2980b9;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Mobile Navigation */
+        .mobile-nav {
+            position: fixed;
+            top: var(--header-height);
+            left: -100%;
+            width: 100%;
+            height: calc(100vh - var(--header-height));
+            background: white;
+            z-index: 999;
+            transition: left 0.3s ease;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .mobile-nav.open {
+            left: 0;
+        }
+
+        .mobile-nav-item {
+            display: block;
+            padding: 1rem;
+            color: var(--text-color);
+            text-decoration: none;
+            border-bottom: 1px solid #eee;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-nav-item:hover {
+            color: var(--accent-color);
+            background: #f8f9fa;
+        }
+
+        /* Sidebar Catalog */
+        .catalog-sidebar {
+            position: fixed;
+            top: var(--header-height);
+            left: calc(-1 * var(--sidebar-width));
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--header-height));
+            background: white;
+            border-right: 1px solid #dee2e6;
+            z-index: 998;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .catalog-sidebar.open {
+            left: 0;
+        }
+
+        .catalog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 997;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .catalog-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Catalog Content */
+        .catalog-header {
+            padding: 2rem;
+            border-bottom: 1px solid #dee2e6;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .catalog-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .catalog-search {
+            padding: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .catalog-search input {
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .catalog-search input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            outline: none;
+        }
+
+        .tag-tree {
+            padding: 1rem 0;
+        }
+
+        .tag-item {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .tag-item:hover {
+            color: var(--accent-color);
+            border-left-color: var(--accent-color);
+            background: #f8f9fa;
+        }
+
+        .tag-item.active {
+            color: var(--accent-color);
+            border-left-color: var(--accent-color);
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: var(--header-height);
+            padding: 2rem;
+            min-height: calc(100vh - var(--header-height));
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.shifted {
+            margin-left: var(--sidebar-width);
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            :root {
+                --header-height: 70px;
+                --sidebar-width: 100vw;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .desktop-nav {
+                display: none;
+            }
+
+            .navbar-brand {
+                font-size: 1.3rem;
+            }
+
+            .logo-img {
+                height: 40px;
+            }
+
+            .catalog-sidebar {
+                width: 100vw;
+                left: -100vw;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .main-content.shifted {
+                margin-left: 0;
+            }
+        }
+
+        /* Alert styles */
+        .alert {
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 1rem;
         }
 
         .btn-primary {
@@ -80,151 +332,271 @@
         .card:hover {
             transform: translateY(-5px);
         }
-
-        .product-card {
-            height: 100%;
-        }
-
-        .product-image {
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px 10px 0 0;
-        }
-
-        .search-form {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .filter-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .tag-btn {
-            background-color: #e9ecef;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .tag-btn:hover, .tag-btn.active {
-            background-color: var(--accent-color);
-            color: white;
-        }
-
-        .cart-count {
-            background-color: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            padding: 0.2rem 0.5rem;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
-
-        .footer {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
-
-        .alert {
-            border: none;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-        }
-
-        .form-control {
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
-            padding: 0.75rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 0 1rem;
-            }
-            
-            .search-form {
-                padding: 1rem;
-            }
-            
-            .filter-tags {
-                justify-content: center;
-            }
-            
-            .logo-img {
-                height: 40px;
-            }
-            
-            .navbar-brand {
-                font-size: 1.3rem;
-            }
-        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'rental:product_list' %}">
-                <img src="{% load static %}{% static 'images/logo.png' %}" alt="Логотип" class="logo-img" style="width: 300px">
+    <!-- Header -->
+    <header class="navbar">
+        <div class="container-fluid px-3">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <!-- Logo -->
+                <a class="navbar-brand" href="{% url 'rental:product_list' %}">
+                    <img src="{% load static %}{% static 'images/logo.png' %}" alt="Логотип" class="logo-img" style="width: 300px">
+                </a>
+                
+                <!-- Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <!-- Desktop Navigation Controls -->
+                <div class="desktop-nav">
+                    <button class="catalog-toggle" onclick="toggleCatalog()" title="Каталог">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    
+                    <a href="{% url 'rental:cart' %}" class="cart-btn" title="Корзина">
+                        <i class="fas fa-shopping-cart"></i>
+                        {% if request.session.cart %}
+                            <span class="cart-count">{{ request.session.cart|length }}</span>
+                        {% endif %}
+                    </a>
+                    
+                    {% if user.is_staff %}
+                        <a href="/superuser/" class="admin-btn" title="Админ панель">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <a href="{% url 'rental:product_list' %}" class="mobile-nav-item">
+            <i class="fas fa-home me-3"></i>Главная
+        </a>
+        <button onclick="toggleCatalog(); toggleMobileMenu();" class="mobile-nav-item border-0 bg-transparent text-start w-100">
+            <i class="fas fa-th-large me-3"></i>Каталог
+        </button>
+        <a href="{% url 'rental:cart' %}" class="mobile-nav-item">
+            <i class="fas fa-shopping-cart me-3"></i>Корзина
+            {% if request.session.cart %}
+                <span class="badge bg-danger ms-2">{{ request.session.cart|length }}</span>
+            {% endif %}
+        </a>
+        {% if user.is_staff %}
+            <a href="/superuser/" class="mobile-nav-item">
+                <i class="fas fa-cog me-3"></i>Админ панель
+            </a>
+        {% endif %}
+    </nav>
+
+    <!-- Catalog Overlay -->
+    <div class="catalog-overlay" id="catalogOverlay" onclick="closeCatalog()"></div>
+
+    <!-- Catalog Sidebar -->
+    <nav class="catalog-sidebar" id="catalogSidebar">
+        <!-- Catalog Header -->
+        <div class="catalog-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="catalog-title mb-1">
+                        <i class="fas fa-th-large me-2"></i>
+                        Каталог товаров
+                    </h2>
+                    <p class="mb-0 opacity-75">Выберите категорию</p>
+                </div>
+                <button class="btn btn-outline-light btn-sm" onclick="closeCatalog()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="catalog-search">
+            <input type="text" class="form-control" placeholder="Поиск товаров..." id="catalogSearch">
+        </div>
+
+        <!-- Tag Tree -->
+        <div class="tag-tree">
+            <a href="{% url 'rental:product_list' %}" class="tag-item {% if not request.GET.tag %}active{% endif %}">
+                <i class="fas fa-th-large me-2"></i>
+                Все товары
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'rental:product_list' %}">Каталог</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'rental:cart' %}">
-                            <i class="fas fa-shopping-cart"></i> Корзина
-                            {% if request.session.cart %}
-                                <span class="cart-count">{{ request.session.cart|length }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    {% if user.is_staff %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/superuser/">Админ панель</a>
-                        </li>
+            <!-- Tags from context -->
+            {% if root_tags %}
+                {% for tag in root_tags %}
+                    <a href="?tag={{ tag.id }}" class="tag-item {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}">
+                        <i class="fas fa-tag me-2"></i>
+                        {{ tag.get_display_name }}
+                    </a>
+                    
+                    {% if tag.get_children %}
+                        {% for child in tag.get_children %}
+                            <a href="?tag={{ child.id }}" class="tag-item {% if request.GET.tag == child.id|stringformat:'s' %}active{% endif %}" style="padding-left: 3rem;">
+                                <i class="fas fa-angle-right me-2"></i>
+                                {{ child.get_display_name }}
+                            </a>
+                        {% endfor %}
                     {% endif %}
-                </ul>
-            </div>
+                {% endfor %}
+            {% endif %}
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Messages -->
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
+            <div class="messages-container mb-4">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
 
+        <!-- Page Content -->
         {% block content %}{% endblock %}
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let catalogOpen = false;
+        let mobileMenuOpen = false;
+
+        // Toggle catalog sidebar
+        function toggleCatalog() {
+            const sidebar = document.getElementById('catalogSidebar');
+            const overlay = document.getElementById('catalogOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            catalogOpen = !catalogOpen;
+            
+            if (catalogOpen) {
+                openCatalog();
+            } else {
+                closeCatalog();
+            }
+        }
+
+        // Open catalog
+        function openCatalog() {
+            const sidebar = document.getElementById('catalogSidebar');
+            const overlay = document.getElementById('catalogOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            catalogOpen = true;
+            sidebar.classList.add('open');
+            overlay.classList.add('show');
+            
+            if (window.innerWidth > 768) {
+                mainContent.classList.add('shifted');
+            }
+            
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close catalog
+        function closeCatalog() {
+            const sidebar = document.getElementById('catalogSidebar');
+            const overlay = document.getElementById('catalogOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            catalogOpen = false;
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            mainContent.classList.remove('shifted');
+            
+            document.body.style.overflow = '';
+        }
+
+        // Toggle mobile menu
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            mobileMenuOpen = !mobileMenuOpen;
+            
+            if (mobileMenuOpen) {
+                mobileNav.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            } else {
+                mobileNav.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const mainContent = document.getElementById('mainContent');
+            const mobileNav = document.getElementById('mobileNav');
+            
+            if (window.innerWidth > 768) {
+                // Desktop
+                mobileNav.classList.remove('open');
+                mobileMenuOpen = false;
+                
+                if (catalogOpen) {
+                    mainContent.classList.add('shifted');
+                }
+            } else {
+                // Mobile
+                mainContent.classList.remove('shifted');
+            }
+            
+            // Reset overflow if no menus are open
+            if (!catalogOpen && !mobileMenuOpen) {
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Close menus on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (catalogOpen) {
+                    closeCatalog();
+                }
+                if (mobileMenuOpen) {
+                    toggleMobileMenu();
+                }
+            }
+        });
+
+        // Close mobile menu when clicking on links
+        document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                if (mobileMenuOpen && this.tagName === 'A') {
+                    toggleMobileMenu();
+                }
+            });
+        });
+
+        // Catalog search functionality
+        document.getElementById('catalogSearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            if (query.length > 0) {
+                // Redirect to product list with search query
+                window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
+            }
+        });
+
+        // Handle catalog search on Enter
+        document.getElementById('catalogSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim();
+                if (query.length > 0) {
+                    window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
+                }
+            }
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
