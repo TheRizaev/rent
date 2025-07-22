@@ -43,22 +43,6 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card-3 h-100">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col">
-                        <h5 class="card-title text-uppercase text-muted mb-0">В аренде</h5>
-                        <span class="h2 font-weight-bold mb-0">{{ active_rentals }}</span>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-handshake fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
         <div class="card stat-card-4 h-100">
             <div class="card-body">
                 <div class="row">
@@ -68,6 +52,22 @@
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-ruble-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card h-100" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <h5 class="card-title text-uppercase mb-0" style="color: rgba(255,255,255,0.8);">Отклонены</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ rejected_orders }}</span>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-times-circle fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -111,6 +111,8 @@
                                         <span class="badge bg-primary">В аренде</span>
                                     {% elif order.status == 'completed' %}
                                         <span class="badge bg-success">Завершена</span>
+                                    {% elif order.status == 'rejected' %}
+                                        <span class="badge bg-danger">Отклонена</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>

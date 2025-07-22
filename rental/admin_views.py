@@ -23,6 +23,7 @@ def admin_dashboard(request):
     total_products = Product.objects.count()
     pending_orders = Order.objects.filter(status='pending').count()
     active_rentals = Order.objects.filter(status='in_rent').count()
+    rejected_orders = Order.objects.filter(status='rejected').count()  # НОВОЕ
     total_revenue = sum(order.total_amount for order in Order.objects.filter(payment_status='paid'))
     
     recent_orders = Order.objects.all()[:5]
@@ -31,6 +32,7 @@ def admin_dashboard(request):
         'total_products': total_products,
         'pending_orders': pending_orders,
         'active_rentals': active_rentals,
+        'rejected_orders': rejected_orders,
         'total_revenue': total_revenue,
         'recent_orders': recent_orders,
     }
@@ -72,17 +74,17 @@ def update_order_status(request, order_id):
         new_status = request.POST.get('status')
         new_payment_status = request.POST.get('payment_status')
         
-        # ИСПРАВЛЕНО: Проверяем, не пытается ли пользователь изменить завершенную заявку
-        if order.status == 'completed':
+        # ИСПРАВЛЕНО: Проверяем, не пытается ли пользователь изменить завершенную или отклоненную заявку
+        if order.status in ['completed', 'rejected']:
             return JsonResponse({
                 'success': False, 
-                'error': 'Нельзя изменить статус завершенной заявки!'
+                'error': 'Нельзя изменить статус завершенной или отклоненной заявки!'
             })
         
         old_status = order.status
         
         if new_status:
-            # Проверяем доступность товаров при подтверждении
+            # Логика изменения статусов с правильным управлением товарами
             if old_status == 'pending' and new_status == 'confirmed':
                 # Проверяем доступность всех товаров
                 for item in order.items.all():
@@ -99,37 +101,35 @@ def update_order_status(request, order_id):
                     product.save()
                     
             elif old_status == 'confirmed' and new_status == 'in_rent':
-                # Товары уже списаны при подтверждении, ничего не делаем
                 pass
                 
             elif (old_status == 'in_rent' or old_status == 'confirmed') and new_status == 'completed':
-                # Завершение аренды - возвращаем товары на склад
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
                     
             elif old_status == 'confirmed' and new_status == 'pending':
-                # Отмена подтверждения - возвращаем товары
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
                     
-            elif old_status == 'in_rent' and new_status == 'confirmed':
-                # Возврат из аренды в подтвержденную - ничего не делаем, товары уже списаны
+            elif old_status == 'pending' and new_status == 'rejected':
+                pass
+                
+            elif old_status == 'confirmed' and new_status == 'rejected':
+                for item in order.items.all():
+                    product = item.product
+                    product.available_quantity += item.quantity
+                    product.save()
+                    
+            elif new_status == 'confirmed':
                 pass
             
             order.status = new_status
         
-        # ИСПРАВЛЕНО: Проверяем статус заявки перед изменением статуса оплаты
         if new_payment_status:
-            # Если заявка завершена, запрещаем изменение статуса оплаты
-            if order.status == 'completed':
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'Нельзя изменить статус оплаты завершенной заявки!'
-                })
             order.payment_status = new_payment_status
         
         order.save()

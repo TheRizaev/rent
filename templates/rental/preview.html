@@ -6,19 +6,19 @@
     <title>ABSTRACT - Профессиональная аренда оборудования</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
         :root {
-            --primary: #3498db;
-            --secondary: #2c3e50;
-            --accent: #e74c3c;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --light: #ecf0f1;
+            --black: #000000;
             --white: #ffffff;
-            --dark: #2c3e50;
-            --gray: #7f8c8d;
-            --light-gray: #bdc3c7;
+            --gray-light: #f8f9fa;
+            --gray: #6c757d;
+            --gray-dark: #343a40;
+            --neon-blue: #00d4ff;
+            --neon-cyan: #00ffff;
+            --neon-purple: #ff00ff;
+            --neon-green: #00ff41;
+            --shadow-neon: 0 0 20px currentColor;
         }
 
         * {
@@ -29,31 +29,96 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: var(--dark);
+            background: var(--black);
+            color: var(--white);
             overflow-x: hidden;
             scroll-behavior: smooth;
+            line-height: 1.6;
         }
 
-        /* Animated background */
-        .animated-bg {
+        /* Animated Background Objects */
+        .floating-objects {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            pointer-events: none;
             z-index: -1;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(52, 152, 219, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(231, 76, 60, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(39, 174, 96, 0.1) 0%, transparent 50%);
-            animation: bgFloat 15s ease-in-out infinite;
+            overflow: hidden;
         }
 
-        @keyframes bgFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(1deg); }
-            66% { transform: translateY(15px) rotate(-0.5deg); }
+        .floating-object {
+            position: absolute;
+            opacity: 0.1;
+            animation: floatAround 20s linear infinite;
+        }
+
+        .floating-object.neon {
+            filter: blur(1px);
+            box-shadow: var(--shadow-neon);
+        }
+
+        .floating-object.circle {
+            border-radius: 50%;
+            border: 2px solid var(--neon-blue);
+        }
+
+        .floating-object.square {
+            border: 2px solid var(--neon-cyan);
+            transform: rotate(45deg);
+        }
+
+        .floating-object.triangle {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 35px solid var(--neon-purple);
+            filter: blur(1px) drop-shadow(0 0 10px var(--neon-purple));
+        }
+
+        .floating-object.line {
+            background: linear-gradient(90deg, var(--neon-green), transparent);
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        @keyframes floatAround {
+            0% {
+                transform: translateX(-100px) translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.3;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateX(calc(100vw + 100px)) translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Grid Lines Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -2;
+            animation: gridMove 30s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
         }
 
         /* Navigation */
@@ -63,17 +128,17 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            padding: 1.5rem 0;
-            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 0;
+            background: rgba(0, 0, 0, 0.95);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(52, 152, 219, 0.1);
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
             transition: all 0.3s ease;
         }
 
         .nav.scrolled {
-            padding: 1rem 0;
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            background: rgba(0, 0, 0, 0.98);
+            box-shadow: 0 4px 30px rgba(0, 212, 255, 0.2);
         }
 
         .nav-container {
@@ -86,12 +151,14 @@
         }
 
         .logo {
-            height: 50px;
+            height: 35px;
             width: auto;
+            filter: brightness(0) invert(1);
             transition: all 0.3s ease;
         }
 
         .logo:hover {
+            filter: brightness(0) invert(1) drop-shadow(0 0 10px var(--neon-blue));
             transform: scale(1.05);
         }
 
@@ -103,53 +170,66 @@
         }
 
         .nav-link {
-            color: var(--dark);
+            color: var(--white);
             text-decoration: none;
             font-weight: 500;
-            position: relative;
-            transition: all 0.3s ease;
-            padding: 0.5rem 1rem;
+            padding: 0.8rem 1.5rem;
             border-radius: 8px;
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0;
-            height: 2px;
-            background: var(--primary);
             transition: all 0.3s ease;
-            transform: translateX(-50%);
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
         }
 
         .nav-link:hover {
-            color: var(--primary);
-            background: rgba(52, 152, 219, 0.1);
-        }
-
-        .nav-link:hover::after {
-            width: 80%;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue);
+            background: rgba(0, 212, 255, 0.1);
         }
 
         .cta-button {
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            color: var(--white);
-            padding: 0.8rem 2rem;
+            background: linear-gradient(45deg, var(--neon-blue), var(--neon-cyan));
+            color: var(--black);
+            padding: 1rem 2rem;
             border: none;
             border-radius: 50px;
-            font-weight: 600;
+            font-weight: 700;
             text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            animation: neonPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes neonPulse {
+            0% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.5); }
+            100% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.8), 0 0 40px rgba(0, 212, 255, 0.3); }
         }
 
         .cta-button:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.3);
-            color: var(--white);
+            color: var(--black);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 1);
+        }
+
+        /* Mobile Toggle */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-toggle:hover {
+            background: var(--neon-blue);
+            color: var(--black);
+            box-shadow: 0 0 15px var(--neon-blue);
         }
 
         /* Hero Section */
@@ -160,40 +240,56 @@
             justify-content: center;
             text-align: center;
             position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(236, 240, 241, 0.9) 100%);
+            background: radial-gradient(ellipse at center, rgba(0, 212, 255, 0.1) 0%, rgba(0, 0, 0, 1) 70%);
         }
 
         .hero-content {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 0 2rem;
             z-index: 2;
         }
 
         .hero-title {
-            font-size: clamp(3rem, 8vw, 6rem);
-            font-weight: 800;
-            line-height: 1.1;
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(4rem, 12vw, 8rem);
+            font-weight: 900;
+            line-height: 1;
             margin-bottom: 2rem;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: titleFloat 4s ease-in-out infinite;
+            color: var(--white);
+            text-shadow: 
+                0 0 10px var(--neon-blue),
+                0 0 20px var(--neon-blue),
+                0 0 40px var(--neon-blue);
+            animation: titleGlow 3s ease-in-out infinite alternate;
+            letter-spacing: 0.1em;
         }
 
-        @keyframes titleFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
+        @keyframes titleGlow {
+            0% { 
+                text-shadow: 
+                    0 0 10px var(--neon-blue),
+                    0 0 20px var(--neon-blue),
+                    0 0 40px var(--neon-blue);
+            }
+            100% { 
+                text-shadow: 
+                    0 0 20px var(--neon-blue),
+                    0 0 30px var(--neon-blue),
+                    0 0 60px var(--neon-blue),
+                    0 0 80px var(--neon-cyan);
+            }
         }
 
         .hero-subtitle {
-            font-size: 1.5rem;
-            font-weight: 400;
-            color: var(--gray);
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-weight: 300;
+            color: var(--gray-light);
             margin-bottom: 3rem;
             animation: fadeInUp 1s ease 0.5s both;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         @keyframes fadeInUp {
@@ -210,93 +306,58 @@
         }
 
         .hero-button {
-            padding: 1rem 2.5rem;
+            padding: 1.2rem 3rem;
             border-radius: 50px;
             font-weight: 600;
             text-decoration: none;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 220px;
+            border: 2px solid;
         }
 
         .hero-button.primary {
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            background: var(--white);
+            color: var(--black);
+            border-color: var(--white);
+        }
+
+        .hero-button.primary:hover {
+            background: transparent;
             color: var(--white);
-            border: 2px solid transparent;
+            box-shadow: 0 0 20px var(--white);
+            transform: translateY(-5px);
         }
 
         .hero-button.secondary {
             background: transparent;
-            color: var(--dark);
-            border: 2px solid var(--primary);
-        }
-
-        .hero-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .hero-button.primary:hover {
-            box-shadow: 0 15px 40px rgba(52, 152, 219, 0.4);
+            color: var(--neon-blue);
+            border-color: var(--neon-blue);
         }
 
         .hero-button.secondary:hover {
-            background: var(--primary);
-            color: var(--white);
+            background: var(--neon-blue);
+            color: var(--black);
+            box-shadow: 0 0 30px var(--neon-blue);
+            transform: translateY(-5px);
         }
 
-        /* Floating elements */
-        .floating-elements {
+        /* Company Info Section */
+        .company-info {
+            padding: 8rem 0;
+            background: linear-gradient(135deg, var(--black) 0%, #111 100%);
+            position: relative;
+        }
+
+        .company-info::before {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .floating-element {
-            position: absolute;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            opacity: 0.1;
-            border-radius: 50%;
-            animation: float 12s ease-in-out infinite;
-        }
-
-        .floating-element:nth-child(1) {
-            width: 80px;
-            height: 80px;
-            top: 15%;
-            left: 10%;
-            animation-delay: 0s;
-        }
-
-        .floating-element:nth-child(2) {
-            width: 120px;
-            height: 120px;
-            top: 60%;
-            right: 15%;
-            animation-delay: 4s;
-        }
-
-        .floating-element:nth-child(3) {
-            width: 60px;
-            height: 60px;
-            bottom: 25%;
-            left: 20%;
-            animation-delay: 8s;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-30px) rotate(180deg); }
-        }
-
-        /* Features Section */
-        .features {
-            padding: 8rem 0;
-            background: var(--white);
-            position: relative;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
         }
 
         .container {
@@ -305,15 +366,59 @@
             padding: 0 2rem;
         }
 
-        .section-title {
+        .company-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .company-title {
+            font-family: 'Orbitron', monospace;
             font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 800;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--white);
+            text-shadow: 0 0 20px var(--neon-cyan);
+        }
+
+        .company-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            color: var(--gray-light);
+            text-align: justify;
+        }
+
+        .company-text strong {
+            color: var(--white);
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 8rem 0;
+            background: var(--black);
+            position: relative;
+        }
+
+        .features::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
             text-align: center;
             margin-bottom: 1rem;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--white);
+            text-shadow: 0 0 20px var(--neon-blue);
         }
 
         .section-subtitle {
@@ -334,72 +439,157 @@
         }
 
         .feature-card {
-            background: var(--white);
-            border-radius: 20px;
+            background: linear-gradient(145deg, #111, #000);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 15px;
             padding: 3rem;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(52, 152, 219, 0.1);
         }
 
         .feature-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, var(--neon-blue), transparent, var(--neon-cyan), transparent);
+            animation: rotate 4s linear infinite;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
 
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            background: linear-gradient(145deg, #111, #000);
+            border-radius: 14px;
+            z-index: 1;
         }
 
         .feature-card:hover::before {
             opacity: 1;
         }
 
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .feature-content {
+            position: relative;
+            z-index: 2;
+        }
+
         .feature-icon {
             width: 80px;
             height: 80px;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            border-radius: 20px;
+            background: linear-gradient(45deg, var(--neon-blue), var(--neon-cyan));
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 2rem;
-            color: var(--white);
+            color: var(--black);
             margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
             animation: iconFloat 3s ease-in-out infinite;
         }
 
         @keyframes iconFloat {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
+            50% { transform: translateY(-10px); }
         }
 
         .feature-title {
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 1rem;
-            color: var(--dark);
+            color: var(--white);
         }
 
         .feature-description {
-            color: var(--gray);
+            color: var(--gray-light);
             line-height: 1.6;
+        }
+
+        /* Equipment List */
+        .equipment-section {
+            padding: 6rem 0;
+            background: linear-gradient(135deg, #111 0%, var(--black) 100%);
+        }
+
+        .equipment-title {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 4vw, 3rem);
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--white);
+            text-shadow: 0 0 15px var(--neon-green);
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .equipment-item {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .equipment-item:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .equipment-item i {
+            font-size: 3rem;
+            color: var(--neon-blue);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .equipment-item h3 {
+            color: var(--white);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .equipment-item p {
+            color: var(--gray-light);
+            font-size: 0.95rem;
         }
 
         /* Stats Section */
         .stats {
-            padding: 6rem 0;
-            background: linear-gradient(135deg, var(--light) 0%, var(--white) 100%);
+            padding: 8rem 0;
+            background: var(--black);
+            position: relative;
+        }
+
+        .stats::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-green), transparent);
         }
 
         .stats-grid {
@@ -410,65 +600,74 @@
 
         .stat-item {
             text-align: center;
-            padding: 2rem;
-            background: var(--white);
+            padding: 3rem 2rem;
+            background: linear-gradient(145deg, #111, #000);
+            border: 1px solid rgba(0, 255, 255, 0.3);
             border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .stat-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.2);
+            border-color: var(--neon-cyan);
         }
 
         .stat-number {
-            font-size: 3rem;
+            font-family: 'Orbitron', monospace;
+            font-size: 3.5rem;
             font-weight: 900;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 20px var(--neon-cyan);
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            animation: numberGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes numberGlow {
+            0% { text-shadow: 0 0 20px var(--neon-cyan); }
+            100% { text-shadow: 0 0 30px var(--neon-cyan), 0 0 40px var(--neon-blue); }
         }
 
         .stat-label {
-            color: var(--gray);
-            font-weight: 500;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         /* CTA Section */
         .cta-section {
             padding: 8rem 0;
+            background: radial-gradient(ellipse at center, rgba(255, 0, 255, 0.1) 0%, var(--black) 70%);
             text-align: center;
             position: relative;
-            background: linear-gradient(135deg, var(--white) 0%, var(--light) 100%);
         }
 
         .cta-content {
             max-width: 800px;
             margin: 0 auto;
             padding: 4rem;
-            background: var(--white);
-            border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(52, 152, 219, 0.1);
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
         }
 
         .cta-title {
+            font-family: 'Orbitron', monospace;
             font-size: clamp(2rem, 4vw, 3.5rem);
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--white);
+            text-shadow: 0 0 20px var(--neon-purple);
         }
 
         .cta-text {
-            font-size: 1.2rem;
-            color: var(--gray);
+            font-size: 1.3rem;
+            color: var(--gray-light);
             margin-bottom: 3rem;
             line-height: 1.6;
         }
@@ -476,26 +675,31 @@
         /* Footer */
         .footer {
             padding: 4rem 0 2rem;
-            border-top: 1px solid rgba(52, 152, 219, 0.1);
+            background: var(--black);
+            border-top: 1px solid rgba(0, 212, 255, 0.3);
             text-align: center;
-            background: var(--white);
         }
 
         .footer-content {
             color: var(--gray);
         }
 
-        /* Mobile hamburger */
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--dark);
-            cursor: pointer;
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .nav-container {
+                padding: 0 1rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
+            }
+            
+            .equipment-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
         }
 
-        /* Mobile */
         @media (max-width: 768px) {
             .nav-menu {
                 display: none;
@@ -503,11 +707,11 @@
                 top: 100%;
                 left: 0;
                 right: 0;
-                background: var(--white);
+                background: rgba(0, 0, 0, 0.98);
                 flex-direction: column;
                 padding: 2rem;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-                border-top: 1px solid rgba(52, 152, 219, 0.1);
+                border-top: 1px solid rgba(0, 212, 255, 0.3);
+                gap: 1rem;
             }
 
             .nav-menu.open {
@@ -527,12 +731,13 @@
             .hero-buttons {
                 flex-direction: column;
                 align-items: center;
+                gap: 1rem;
             }
 
             .hero-button {
-                width: 80%;
+                width: 90%;
                 max-width: 300px;
-                text-align: center;
+                padding: 1rem 2rem;
             }
 
             .features-grid {
@@ -546,11 +751,44 @@
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .equipment-grid {
+                grid-template-columns: 1fr;
             }
 
             .cta-content {
                 padding: 2rem;
                 margin: 0 1rem;
+            }
+
+            .company-text {
+                text-align: left;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 3rem;
+            }
+            
+            .feature-card {
+                padding: 1.5rem;
+            }
+            
+            .feature-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-number {
+                font-size: 2.5rem;
             }
         }
 
@@ -568,249 +806,426 @@
     </style>
 </head>
 <body>
-    <div class="animated-bg"></div>
+   <!-- Grid Background -->
+   <div class="grid-bg"></div>
 
-    <!-- Navigation -->
-    <nav class="nav" id="navbar">
-        <div class="nav-container">
-            <img src="/static/images/logo.png" alt="ABSTRACT" class="logo">
-            
-            <button class="mobile-toggle" onclick="toggleMobileMenu()">
-                <i class="fas fa-bars"></i>
-            </button>
-            
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="#services" class="nav-link">Услуги</a></li>
-                <li><a href="#about" class="nav-link">О нас</a></li>
-                <li><a href="#contact" class="nav-link">Контакты</a></li>
-                <li><a href="/catalog/" class="cta-button">Перейти к каталогу</a></li>
-            </ul>
-        </div>
-    </nav>
+   <!-- Floating Objects -->
+   <div class="floating-objects" id="floatingObjects"></div>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="floating-elements">
-            <div class="floating-element"></div>
-            <div class="floating-element"></div>
-            <div class="floating-element"></div>
-        </div>
-        <div class="hero-content">
-            <h1 class="hero-title">ABSTRACT</h1>
-            <p class="hero-subtitle">Профессиональная аренда оборудования для вашего бизнеса</p>
-            <div class="hero-buttons">
-                <a href="/catalog/" class="hero-button primary">Просмотреть каталог</a>
-                <a href="#services" class="hero-button secondary">Узнать больше</a>
-            </div>
-        </div>
-    </section>
+   <!-- Navigation -->
+   <nav class="nav" id="navbar">
+       <div class="nav-container">
+           <img src="/static/images/logo.png" alt="ABSTRACT" class="logo">
+           
+           <button class="mobile-toggle" onclick="toggleMobileMenu()">
+               <i class="fas fa-bars"></i>
+           </button>
+           
+           <ul class="nav-menu" id="navMenu">
+               <li><a href="#services" class="nav-link">Услуги</a></li>
+               <li><a href="#about" class="nav-link">О нас</a></li>
+               <li><a href="#equipment" class="nav-link">Оборудование</a></li>
+               <li><a href="#contact" class="nav-link">Контакты</a></li>
+               <li><a href="/catalog/" class="cta-button">Каталог</a></li>
+           </ul>
+       </div>
+   </nav>
 
-    <!-- Features Section -->
-    <section class="features" id="services">
-        <div class="container">
-            <h2 class="section-title animate-on-scroll">Наши преимущества</h2>
-            <p class="section-subtitle animate-on-scroll">Мы предоставляем качественное оборудование и профессиональный сервис</p>
-            
-            <div class="features-grid">
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-shipping-fast"></i>
-                    </div>
-                    <h3 class="feature-title">Быстрая доставка</h3>
-                    <p class="feature-description">Доставляем оборудование в кратчайшие сроки по всему городу. Наша служба логистики работает круглосуточно.</p>
-                </div>
-                
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <h3 class="feature-title">Техническая поддержка</h3>
-                    <p class="feature-description">Профессиональная техническая поддержка и консультации наших специалистов на протяжении всего срока аренды.</p>
-                </div>
-                
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="feature-title">Гарантия качества</h3>
-                    <p class="feature-description">Все оборудование проходит тщательную проверку и диагностику перед каждой выдачей в аренду.</p>
-                </div>
-                
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-calculator"></i>
-                    </div>
-                    <h3 class="feature-title">Гибкие тарифы</h3>
-                    <p class="feature-description">Индивидуальный подход к ценообразованию и возможность долгосрочной аренды со скидками.</p>
-                </div>
-                
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-headset"></i>
-                    </div>
-                    <h3 class="feature-title">Круглосуточная поддержка</h3>
-                    <p class="feature-description">Наша служба поддержки готова помочь вам в любое время дня и ночи, включая выходные и праздники.</p>
-                </div>
-                
-                <div class="feature-card animate-on-scroll">
-                    <div class="feature-icon">
-                        <i class="fas fa-award"></i>
-                    </div>
-                    <h3 class="feature-title">Высокое качество</h3>
-                    <p class="feature-description">Мы работаем только с проверенными брендами и поставщиками, гарантируя надежность оборудования.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+   <!-- Hero Section -->
+   <section class="hero">
+       <div class="hero-content">
+           <h1 class="hero-title">ABSTRACT</h1>
+           <p class="hero-subtitle">Профессиональная аренда оборудования для фото и видеосъемки</p>
+           <div class="hero-buttons">
+               <a href="/catalog/" class="hero-button primary">Просмотреть каталог</a>
+               <a href="#services" class="hero-button secondary">Узнать больше</a>
+           </div>
+       </div>
+   </section>
 
-    <!-- Stats Section -->
-    <section class="stats" id="about">
-        <div class="container">
-            <div class="stats-grid animate-on-scroll">
-                <div class="stat-item">
-                    <span class="stat-number">5000+</span>
-                    <span class="stat-label">Единиц оборудования</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">1000+</span>
-                    <span class="stat-label">Довольных клиентов</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">24/7</span>
-                    <span class="stat-label">Техподдержка</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number">99%</span>
-                    <span class="stat-label">Положительных отзывов</span>
-                </div>
-            </div>
-        </div>
-    </section>
+   <!-- Company Info Section -->
+   <section class="company-info" id="about">
+       <div class="container">
+           <div class="company-content animate-on-scroll">
+               <h2 class="company-title">Все для вашего творчества и профессиональной работы</h2>
+               <p class="company-text">
+                   Мы предоставляем <strong>качественное оборудование и надежный сервис</strong> для съемок любого уровня — от блогеров и фотографов до кинокоманд. Наша миссия — сделать профессиональное оборудование доступным для каждого творца.
+               </p>
+               <p class="company-text">
+                   В нашем распоряжении более <strong>5,000+ единиц оборудования</strong> последнего поколения, которое регулярно обновляется и проходит тщательную проверку. Мы понимаем, насколько важна надежность техники для успешной реализации ваших проектов.
+               </p>
+               <p class="company-text">
+                   <strong>1,000+ довольных клиентов</strong> уже доверили нам свои проекты и получили <strong>99% положительных отзывов</strong>. Каждый день мы подтверждаем наш статус надежного партнера в сфере аренды профессионального оборудования.
+               </p>
+           </div>
+       </div>
+   </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section" id="contact">
-        <div class="container">
-            <div class="cta-content animate-on-scroll">
-                <h2 class="cta-title">Готовы начать работу?</h2>
-                <p class="cta-text">Свяжитесь с нами сегодня и получите профессиональную консультацию по выбору оборудования для ваших задач.</p>
-                <div class="hero-buttons">
-                    <a href="/catalog/" class="hero-button primary">Посмотреть каталог</a>
-                    <a href="tel:+998901234567" class="hero-button secondary">Связаться с нами</a>
-                </div>
-            </div>
-        </div>
-    </section>
+   <!-- Features Section -->
+   <section class="features" id="services">
+       <div class="container">
+           <h2 class="section-title animate-on-scroll">Наши преимущества</h2>
+           <p class="section-subtitle animate-on-scroll">Профессиональный подход к каждому клиенту</p>
+           
+           <div class="features-grid">
+               <div class="feature-card animate-on-scroll">
+                   <div class="feature-content">
+                       <div class="feature-icon">
+                           <i class="fas fa-shipping-fast"></i>
+                       </div>
+                       <h3 class="feature-title">Быстрая доставка по городу</h3>
+                       <p class="feature-description">Мы привезем оборудование туда, где идет ваша съемка, в удобное для вас время. Наша логистическая служба работает круглосуточно для вашего удобства.</p>
+                   </div>
+               </div>
+               
+               <div class="feature-card animate-on-scroll">
+                   <div class="feature-content">
+                       <div class="feature-icon">
+                           <i class="fas fa-headset"></i>
+                       </div>
+                       <h3 class="feature-title">Техническая поддержка 24/7</h3>
+                       <p class="feature-description">Поможем настроить свет, камеры и звук, ответим на любые вопросы в процессе аренды. Наши специалисты всегда готовы прийти на помощь.</p>
+                   </div>
+               </div>
+               
+               <div class="feature-card animate-on-scroll">
+                   <div class="feature-content">
+                       <div class="feature-icon">
+                           <i class="fas fa-check-circle"></i>
+                       </div>
+                       <h3 class="feature-title">Проверенное оборудование</h3>
+                       <p class="feature-description">Каждый комплект проходит диагностику и подготовку перед выдачей. Мы гарантируем исправность всего предоставляемого оборудования.</p>
+                   </div>
+               </div>
+               
+               <div class="feature-card animate-on-scroll">
+                   <div class="feature-content">
+                       <div class="feature-icon">
+                           <i class="fas fa-calculator"></i>
+                       </div>
+                       <h3 class="feature-title">Гибкие тарифы и скидки</h3>
+                       <p class="feature-description">Выбирайте почасовую, суточную или долгосрочную аренду с выгодными условиями. Индивидуальный подход к ценообразованию для каждого проекта.</p>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <p>&copy; 2025 ABSTRACT. Все права защищены. Профессиональная аренда оборудования.</p>
-            </div>
-        </div>
-    </footer>
+   <!-- Equipment Section -->
+   <section class="equipment-section" id="equipment">
+       <div class="container">
+           <h2 class="equipment-title animate-on-scroll">У нас в наличии:</h2>
+           
+           <div class="equipment-grid">
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-lightbulb"></i>
+                   <h3>Осветительные приборы</h3>
+                   <p>Профессиональные LED-панели, софтбоксы, рефлекторы и студийный свет</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-camera"></i>
+                   <h3>Камеры и объективы</h3>
+                   <p>Современные фото и видеокамеры, широкий выбор объективов всех категорий</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-video"></i>
+                   <h3>Стедикамы, штативы, риги</h3>
+                   <p>Стабилизаторы изображения, профессиональные штативы и операторские риги</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-microphone"></i>
+                   <h3>Звуковое оборудование</h3>
+                   <p>Микрофоны, рекордеры, мониторы и полные аудиосистемы</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-palette"></i>
+                   <h3>Фоны и аксессуары для студии</h3>
+                   <p>Хромакей, циклорамы, держатели фонов и студийная мебель</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-star"></i>
+                   <h3>Декор и реквизит для съемок</h3>
+                   <p>Разнообразный реквизит, декорации и аксессуары для тематических съемок</p>
+               </div>
+               
+               <div class="equipment-item animate-on-scroll">
+                   <i class="fas fa-tools"></i>
+                   <h3>И многое другое</h3>
+                   <p>Дополнительные аксессуары, кабели, адаптеры и специализированное оборудование</p>
+               </div>
+           </div>
+       </div>
+   </section>
 
-    <script>
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 100) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
+   <!-- Stats Section -->
+   <section class="stats">
+       <div class="container">
+           <div class="stats-grid animate-on-scroll">
+               <div class="stat-item">
+                   <span class="stat-number" data-target="5000">0</span>
+                   <span class="stat-label">+ единиц оборудования</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-number" data-target="1000">0</span>
+                   <span class="stat-label">+ довольных клиентов</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-number">99</span>
+                   <span class="stat-label">% положительных отзывов</span>
+               </div>
+               <div class="stat-item">
+                   <span class="stat-number">24/7</span>
+                   <span class="stat-label">Техподдержка</span>
+               </div>
+           </div>
+       </div>
+   </section>
 
-        // Mobile menu toggle
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            navMenu.classList.toggle('open');
-        }
+   <!-- CTA Section -->
+   <section class="cta-section" id="contact">
+       <div class="container">
+           <div class="cta-content animate-on-scroll">
+               <h2 class="cta-title">🎯 Готовы к съемке?</h2>
+               <p class="cta-text">Свяжитесь с нами сегодня, чтобы подобрать оборудование для вашего проекта и получить профессиональную консультацию.</p>
+               <div class="hero-buttons">
+                   <a href="/catalog/" class="hero-button primary">Посмотреть каталог</a>
+                   <a href="tel:+998901234567" class="hero-button secondary">Связаться с нами</a>
+               </div>
+           </div>
+       </div>
+   </section>
 
-        // Animate on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+   <!-- Footer -->
+   <footer class="footer">
+       <div class="container">
+           <div class="footer-content">
+               <p>&copy; 2025 ABSTRACT. Все права защищены. Профессиональная аренда оборудования для фото и видеосъемки.</p>
+           </div>
+       </div>
+   </footer>
 
-        const observer = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animated');
-                }
-            });
-        }, observerOptions);
+   <script>
+       // Create floating objects
+       function createFloatingObjects() {
+           const container = document.getElementById('floatingObjects');
+           const objectCount = window.innerWidth > 768 ? 20 : 10;
+           
+           const shapes = ['circle', 'square', 'triangle', 'line'];
+           const colors = ['--neon-blue', '--neon-cyan', '--neon-purple', '--neon-green'];
+           
+           for (let i = 0; i < objectCount; i++) {
+               const object = document.createElement('div');
+               const shape = shapes[Math.floor(Math.random() * shapes.length)];
+               const color = colors[Math.floor(Math.random() * colors.length)];
+               
+               object.className = `floating-object ${shape} neon`;
+               
+               if (shape === 'circle') {
+                   const size = Math.random() * 30 + 20;
+                   object.style.width = size + 'px';
+                   object.style.height = size + 'px';
+                   object.style.borderColor = `var(${color})`;
+               } else if (shape === 'square') {
+                   const size = Math.random() * 25 + 15;
+                   object.style.width = size + 'px';
+                   object.style.height = size + 'px';
+                   object.style.borderColor = `var(${color})`;
+               } else if (shape === 'line') {
+                   const width = Math.random() * 60 + 40;
+                   object.style.width = width + 'px';
+                   object.style.background = `var(${color})`;
+               }
+               
+               // Random positioning and timing
+               object.style.left = Math.random() * 100 + '%';
+               object.style.animationDuration = (Math.random() * 20 + 15) + 's';
+               object.style.animationDelay = Math.random() * 20 + 's';
+               
+               container.appendChild(object);
+           }
+       }
 
-        document.querySelectorAll('.animate-on-scroll').forEach(el => {
-            observer.observe(el);
-        });
+       // Navbar scroll effects
+       window.addEventListener('scroll', function() {
+           const navbar = document.getElementById('navbar');
+           const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+           
+           if (scrollTop > 100) {
+               navbar.classList.add('scrolled');
+           } else {
+               navbar.classList.remove('scrolled');
+           }
+       });
 
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
+       // Mobile menu toggle
+       function toggleMobileMenu() {
+           const navMenu = document.getElementById('navMenu');
+           navMenu.classList.toggle('open');
+       }
 
-        // Counter animation
-        function animateCounters() {
-            const counters = document.querySelectorAll('.stat-number');
-            counters.forEach(counter => {
-                const text = counter.textContent;
-                const target = parseInt(text.replace(/\D/g, ''));
-                const suffix = text.replace(/\d/g, '');
-                
-                if (target) {
-                    const increment = target / 100;
-                    let current = 0;
-                    
-                    const updateCounter = () => {
-                        if (current < target) {
-                            current += increment;
-                            counter.textContent = Math.ceil(current) + suffix;
-                            requestAnimationFrame(updateCounter);
-                        } else {
-                            counter.textContent = target + suffix;
-                        }
-                    };
-                    
-                    updateCounter();
-                } else {
-                    // For non-numeric values like "24/7"
-                    counter.textContent = text;
-                }
-            });
-        }
+       // Animate numbers with neon effect
+       function animateNumber(element, target) {
+           const duration = 2000;
+           const start = 0;
+           const increment = target / (duration / 16);
+           let current = start;
+           
+           const timer = setInterval(() => {
+               current += increment;
+               if (current >= target) {
+                   current = target;
+                   clearInterval(timer);
+               }
+               element.textContent = Math.floor(current);
+           }, 16);
+       }
 
-        // Trigger counter animation when stats section is visible
-        const statsSection = document.querySelector('.stats');
-        const statsObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCounters();
-                    statsObserver.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.5 });
+       // Animate on scroll with intersection observer
+       const observerOptions = {
+           threshold: 0.1,
+           rootMargin: '0px 0px -50px 0px'
+       };
 
-        if (statsSection) {
-            statsObserver.observe(statsSection);
-        }
+       const observer = new IntersectionObserver(function(entries) {
+           entries.forEach(entry => {
+               if (entry.isIntersecting) {
+                   entry.target.classList.add('animated');
+                   
+                   // Animate numbers when stats section is visible
+                   if (entry.target.classList.contains('stats-grid')) {
+                       const numbers = entry.target.querySelectorAll('.stat-number[data-target]');
+                       numbers.forEach(number => {
+                           const target = parseInt(number.getAttribute('data-target'));
+                           animateNumber(number, target);
+                       });
+                   }
+               }
+           });
+       }, observerOptions);
 
-        // Close mobile menu when clicking on links
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function() {
-                const navMenu = document.getElementById('navMenu');
-                navMenu.classList.remove('open');
-            });
-        });
-    </script>
+       // Observe all animated elements
+       document.querySelectorAll('.animate-on-scroll').forEach(el => {
+           observer.observe(el);
+       });
+
+       // Smooth scrolling for anchor links
+       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+           anchor.addEventListener('click', function (e) {
+               e.preventDefault();
+               const target = document.querySelector(this.getAttribute('href'));
+               if (target) {
+                   const offsetTop = target.offsetTop - 80;
+                   window.scrollTo({
+                       top: offsetTop,
+                       behavior: 'smooth'
+                   });
+               }
+           });
+       });
+
+       // Close mobile menu when clicking on links
+       document.querySelectorAll('.nav-link').forEach(link => {
+           link.addEventListener('click', function() {
+               const navMenu = document.getElementById('navMenu');
+               navMenu.classList.remove('open');
+           });
+       });
+
+       // Add loading animation to CTA buttons
+       document.querySelectorAll('.hero-button, .cta-button').forEach(button => {
+           button.addEventListener('click', function(e) {
+               if (this.href && !this.href.includes('#')) {
+                   e.preventDefault();
+                   
+                   // Add loading effect
+                   const originalText = this.innerHTML;
+                   this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+                   this.style.pointerEvents = 'none';
+                   
+                   setTimeout(() => {
+                       window.location.href = this.href;
+                   }, 800);
+               }
+           });
+       });
+
+       // Mouse movement parallax effect for floating objects
+       let mouseX = 0, mouseY = 0;
+       document.addEventListener('mousemove', function(e) {
+           mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+           mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+           
+           // Apply subtle parallax to floating objects
+           const objects = document.querySelectorAll('.floating-object');
+           objects.forEach((obj, index) => {
+               const speed = (index % 3 + 1) * 0.5;
+               obj.style.transform += ` translate(${mouseX * speed}px, ${mouseY * speed}px)`;
+           });
+       });
+
+       // Initialize page
+       document.addEventListener('DOMContentLoaded', function() {
+           // Create floating objects
+           createFloatingObjects();
+           
+           // Add entrance animations with staggered delays
+           const animatedElements = document.querySelectorAll('.feature-card, .equipment-item, .stat-item');
+           animatedElements.forEach((el, index) => {
+               el.style.animationDelay = `${index * 0.1}s`;
+           });
+           
+           // Preloader effect
+           document.body.style.opacity = '0';
+           document.body.style.transition = 'opacity 1s ease';
+           
+           setTimeout(() => {
+               document.body.style.opacity = '1';
+           }, 100);
+       });
+
+       // Performance optimization for mobile devices
+       if (window.innerWidth <= 768) {
+           // Reduce floating objects on mobile
+           const objects = document.querySelectorAll('.floating-object');
+           objects.forEach((obj, index) => {
+               if (index > 10) {
+                   obj.remove();
+               }
+           });
+           
+           // Disable some heavy animations on mobile
+           document.querySelector('.grid-bg').style.animation = 'none';
+       }
+
+       // Add scroll-triggered neon effects
+       window.addEventListener('scroll', function() {
+           const scrolled = window.pageYOffset;
+           const rate = scrolled * -0.3;
+           
+           // Subtle parallax for hero section
+           const hero = document.querySelector('.hero');
+           if (hero && window.innerWidth > 768) {
+               hero.style.transform = `translateY(${rate}px)`;
+           }
+       });
+
+       // Random neon pulse effects
+       setInterval(() => {
+           const glowElements = document.querySelectorAll('.feature-icon, .stat-number');
+           const randomElement = glowElements[Math.floor(Math.random() * glowElements.length)];
+           
+           if (randomElement && Math.random() > 0.8) {
+               randomElement.style.animation = 'none';
+               setTimeout(() => {
+                   randomElement.style.animation = '';
+               }, 100);
+           }
+       }, 3000);
+   </script>
 </body>
 </html>

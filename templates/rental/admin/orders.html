@@ -59,32 +59,30 @@
                         <td>{{ order.total_amount }} сум</td>
                         <td>
                             {% if order.status == 'completed' %}
-                                <span class="badge bg-success">Завершена</span>
+                                <span class="badge bg-success fs-6 px-3 py-2">
+                                    <i class="fas fa-check-circle me-1"></i>Завершена
+                                </span>
+                                <small class="text-muted d-block">Изменение запрещено</small>
+                            {% elif order.status == 'rejected' %}
+                                <span class="badge bg-danger fs-6 px-3 py-2">
+                                    <i class="fas fa-times-circle me-1"></i>Отклонена
+                                </span>
                                 <small class="text-muted d-block">Изменение запрещено</small>
                             {% else %}
                                 <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}" data-original-value="{{ order.status }}">
                                     <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>
                                     <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                    {% comment %} <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option> {% endcomment %}
+                                    <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
                                     <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
+                                    <option value="rejected" {% if order.status == 'rejected' %}selected{% endif %}>Отклонена</option>
                                 </select>
                             {% endif %}
                         </td>
                         <td>
-                            <!-- ИСПРАВЛЕНО: Отключаем изменение статуса оплаты для завершенных заявок -->
-                            {% if order.status == 'completed' %}
-                                {% if order.payment_status == 'paid' %}
-                                    <span class="badge bg-success">Оплачена</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Не оплачена</span>
-                                {% endif %}
-                                <small class="text-muted d-block">Изменение запрещено</small>
-                            {% else %}
-                                <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}" data-original-value="{{ order.payment_status }}">
-                                    <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
-                                    <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
-                                </select>
-                            {% endif %}
+                            <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}" data-original-value="{{ order.payment_status }}">
+                                <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
+                                <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
+                            </select>
                         </td>
                         <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
                         <td>

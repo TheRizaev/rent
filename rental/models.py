@@ -185,8 +185,8 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Ожидает подтверждения'),
         ('confirmed', 'Подтверждена'),
-        ('in_rent', 'В аренде'),
         ('completed', 'Завершена'),
+        ('rejected', 'Отклонена'),
     ]
     
     PAYMENT_CHOICES = [
