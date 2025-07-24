@@ -38,10 +38,10 @@
                                     <div class="col-md-6">
                                         <div class="price-breakdown">
                                             <div class="small text-muted">
-                                                {{ item.product.daily_price }} сум × {{ item.quantity }} шт.
+                                                {{ item.product.daily_price|format_price }} сум × {{ item.quantity }} шт.
                                             </div>
                                             <div class="h5 text-success">
-                                                {{ item.total|floatformat:0 }} сум
+                                                {{ item.total|format_price }} сум
                                             </div>
                                         </div>
                                     </div>
@@ -79,7 +79,7 @@
                                     <small class="text-muted">{{ item.quantity }} шт.</small>
                                 </div>
                                 <div class="text-end">
-                                    <small>{{ item.total|floatformat:0 }} сум</small>
+                                    <small>{{ item.total|format_price }} сум</small>
                                 </div>
                             </div>
                         {% endfor %}
@@ -88,7 +88,7 @@
                         
                         <div class="d-flex justify-content-between mb-2">
                             <strong>Итого:</strong>
-                            <strong class="text-success h4">{{ total|floatformat:0 }} сум / день</strong>
+                            <strong class="text-success h4">{{ total|format_price }} сум / день</strong>
                         </div>
                     </div>
                     

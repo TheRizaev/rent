@@ -5,6 +5,223 @@
 
 {% block content %}
 <style>
+    :root {
+        --sidebar-width: 320px;
+    }
+
+    /* Layout with Sidebar */
+    .catalog-layout {
+        display: flex;
+        gap: 2rem;
+        margin: -2rem;
+        min-height: calc(100vh - var(--header-height));
+    }
+
+    /* Sidebar */
+    .catalog-sidebar {
+        width: var(--sidebar-width);
+        background: white;
+        border-right: 1px solid #dee2e6;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        height: calc(100vh - var(--header-height));
+        overflow-y: auto;
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        z-index: 999;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .catalog-sidebar.show {
+        transform: translateX(0);
+    }
+
+    /* Main content with sidebar */
+    .main-catalog-content {
+        margin-left: 0;
+        padding: 2rem;
+        width: 100%;
+        transition: margin-left 0.3s ease;
+    }
+
+    .main-catalog-content.sidebar-open {
+        margin-left: var(--sidebar-width);
+    }
+
+    /* Toggle Button */
+    .sidebar-toggle-btn {
+        position: fixed;
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
+        background: var(--accent-color);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 0 50% 50% 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        z-index: 1000;
+        cursor: pointer;
+    }
+
+    .sidebar-toggle-btn.open {
+        left: var(--sidebar-width);
+    }
+
+    .sidebar-toggle-btn:hover {
+        background: #2980b9;
+        width: 45px;
+    }
+
+    .sidebar-toggle-btn i {
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar-toggle-btn.open i {
+        transform: rotate(180deg);
+    }
+
+    /* Sidebar Content */
+    .catalog-header {
+        padding: 2rem;
+        border-bottom: 1px solid #dee2e6;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+    }
+
+    .catalog-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .catalog-search {
+        padding: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .catalog-search input {
+        border-radius: 10px;
+        border: 2px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .catalog-search input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        outline: none;
+    }
+
+    /* Tag Tree */
+    .tag-tree {
+        padding: 1rem 0;
+    }
+
+    .tag-item {
+        display: block;
+        padding: 0.75rem 1.5rem;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .tag-item:hover {
+        color: var(--accent-color);
+        border-left-color: var(--accent-color);
+        background: #f8f9fa;
+    }
+
+    .tag-item.active {
+        color: var(--accent-color);
+        border-left-color: var(--accent-color);
+        background: #e3f2fd;
+        font-weight: 600;
+    }
+
+    /* Parent tag with children */
+    .tag-item.has-children {
+        padding-right: 3rem;
+    }
+
+    .tag-item.has-children::after {
+        content: '\f105';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: transform 0.3s ease;
+    }
+
+    .tag-item.has-children.expanded::after {
+        transform: translateY(-50%) rotate(90deg);
+    }
+
+    /* Child tags */
+    .tag-children {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .tag-children.expanded {
+        max-height: 500px;
+    }
+
+    .tag-item.child {
+        padding-left: 3rem;
+        font-size: 0.9rem;
+        border-left: none;
+        position: relative;
+    }
+
+    .tag-item.child::before {
+        content: '';
+        position: absolute;
+        left: 2rem;
+        top: 50%;
+        width: 12px;
+        height: 1px;
+        background: #dee2e6;
+        transform: translateY(-50%);
+    }
+
+    .tag-item.child:hover {
+        background: #e9ecef;
+    }
+
+    /* Overlay for mobile */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
     /* Search section */
     .search-form {
         background: white;
@@ -44,40 +261,6 @@
         color: white;
     }
 
-    /* Tag filters */
-    .filter-section {
-        margin-top: 1.5rem;
-    }
-
-    .filter-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-
-    .tag-btn {
-        background-color: #f8f9fa;
-        border: 2px solid #e9ecef;
-        color: #495057;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .tag-btn:hover,
-    .tag-btn.active {
-        background-color: #3498db;
-        border-color: #3498db;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-    }
-
     /* Results info */
     .results-info {
         background: linear-gradient(45deg, #e3f2fd, #bbdefb);
@@ -110,27 +293,19 @@
 
     @media (min-width: 992px) {
         .products-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 
     @media (min-width: 1200px) {
         .products-grid {
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
         }
     }
 
     @media (min-width: 1400px) {
         .products-grid {
-            grid-template-columns: repeat(6, 1fr);
-        }
-    }
-
-    /* Mobile single column */
-    @media (max-width: 575px) {
-        .products-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
+            grid-template-columns: repeat(5, 1fr);
         }
     }
 
@@ -363,8 +538,29 @@
         100% { transform: rotate(360deg); }
     }
 
-    /* Mobile adjustments */
+    /* Mobile Styles */
     @media (max-width: 768px) {
+        .catalog-layout {
+            flex-direction: column;
+        }
+
+        .catalog-sidebar {
+            z-index: 1001;
+        }
+
+        .sidebar-toggle-btn {
+            z-index: 1002;
+        }
+
+        .main-catalog-content {
+            margin-left: 0;
+            padding: 1rem;
+        }
+
+        .main-catalog-content.sidebar-open {
+            margin-left: 0;
+        }
+
         .search-form {
             padding: 1rem;
         }
@@ -393,141 +589,312 @@
         .product-price {
             font-size: 1.1rem;
         }
+
+        .products-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
     }
 </style>
 
-<!-- Search and Filters -->
-<div class="search-form">
-    <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-8">
-            <label class="form-label fw-bold text-primary mb-3">
-                <i class="fas fa-search me-2"></i>
-                Поиск товаров
-            </label>
-            <input type="text" name="search" class="form-control search-input" 
-                   placeholder="Введите название товара, артикул или описание..." 
-                   value="{{ search_query }}">
-        </div>
-        <div class="col-md-4">
-            <button type="submit" class="btn search-btn w-100">
-                <i class="fas fa-search me-2"></i>Найти товары
-            </button>
-        </div>
-    </form>
-</div>
+<!-- Layout Container -->
+<div class="catalog-layout">
+    <!-- Toggle Button -->
+    <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">
+        <i class="fas fa-chevron-right"></i>
+    </button>
 
-<!-- Search Results Info -->
-{% if search_query %}
-<div class="results-info">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-info-circle me-3 fs-5"></i>
-        <div>
-            <strong>Результаты поиска по запросу:</strong> "{{ search_query }}"
-            <div class="small mt-1">Найдено товаров: {{ products.count }}</div>
-        </div>
-    </div>
-</div>
-{% endif %}
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-<!-- Products Grid -->
-<div class="products-grid">
-    {% for product in products %}
-    <div class="product-card" data-product-id="{{ product.id }}" onclick="window.location.href='{% url 'rental:product_detail' product.id %}'">
-        <!-- Product Image -->
-        <div class="product-image-container">
-            {% if product.photo %}
-                <img src="{{ product.photo.url }}" class="product-image" alt="{{ product.name }}">
-            {% else %}
-                <div class="no-image">
-                    <div>
-                        <i class="fas fa-camera fa-2x mb-2 d-block"></i>
-                        <small>Фото скоро появится</small>
+    <!-- Catalog Sidebar -->
+    <nav class="catalog-sidebar" id="catalogSidebar">
+        <!-- Catalog Header -->
+        <div class="catalog-header">
+            <div>
+                <h2 class="catalog-title mb-1">
+                    <i class="fas fa-th-large me-2"></i>
+                    Каталог товаров
+                </h2>
+                <p class="mb-0 opacity-75">Выберите категорию</p>
+            </div>
+        </div>
+
+
+        <!-- Tag Tree -->
+        <div class="tag-tree">
+            <a href="{% url 'rental:product_list' %}" 
+               class="tag-item {% if not request.GET.tag %}active{% endif %}">
+                <i class="fas fa-th-large me-2"></i>
+                Все товары
+            </a>
+            
+            <!-- Root Tags -->
+            {% if root_tags %}
+                {% for tag in root_tags %}
+                    <div class="tag-group">
+                        <a href="#" class="tag-item has-children" 
+                           data-tag-id="{{ tag.id }}" 
+                           data-has-children="true"
+                           onclick="toggleTagChildren({{ tag.id }}, event)">
+                            <i class="fas fa-folder me-2"></i>
+                            {{ tag.get_display_name }}
+                        </a>
+                        
+                        {% if tag.get_children %}
+                            <div class="tag-children" id="children-{{ tag.id }}">
+                                {% for child in tag.get_children %}
+                                    <a href="?tag={{ child.id }}" 
+                                       class="tag-item child {% if request.GET.tag == child.id|stringformat:'s' %}active{% endif %}">
+                                        <i class="fas fa-tag me-2"></i>
+                                        {{ child.get_display_name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                </div>
+                {% endfor %}
             {% endif %}
-            
-            <!-- Status Badge -->
-            <div class="product-status {% if product.available_quantity <= 0 %}status-out{% elif product.available_quantity <= 3 %}status-low{% else %}status-available{% endif %}">
-                {% if product.available_quantity <= 0 %}
-                    <i class="fas fa-times-circle me-1"></i>Нет в наличии
-                {% elif product.available_quantity <= 3 %}
-                    <i class="fas fa-exclamation-triangle me-1"></i>Осталось {{ product.available_quantity }}
-                {% else %}
-                    <i class="fas fa-check-circle me-1"></i>В наличии: {{ product.available_quantity }}
-                {% endif %}
-            </div>
-            
-            <!-- Quick Info Overlay -->
-            <div class="product-overlay">
-                <div class="small">
-                    <strong><i class="fas fa-barcode me-1"></i>{{ product.article }}</strong>
-                </div>
-                <div class="small mt-1 opacity-75">
-                    <i class="fas fa-map-marker-alt me-1"></i>{{ product.shelf }}
-                </div>
-                {% if product.tags.exists %}
-                    <div class="small mt-1 opacity-75">
-                        <i class="fas fa-tags me-1"></i>
-                        {% for tag in product.tags.all %}
-                            {{ tag.get_display_name }}{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
         </div>
-        
-        <!-- Product Content -->
-        <div class="product-content">
-            <h3 class="product-title">{{ product.get_display_name }}</h3>
-            <div class="product-article">
-                <i class="fas fa-hashtag me-1"></i>{{ product.article }}
-            </div>
-            <div class="product-price">
-                {{ product.daily_price|format_price }} сум<small class="text-muted">/день</small>
-            </div>
-            
-            <!-- Actions -->
-            <div class="product-actions">
-                {% if product.available_quantity > 0 %}
-                    <form method="post" action="{% url 'rental:add_to_cart' product.id %}" 
-                          class="add-to-cart-form flex-fill" onclick="event.stopPropagation();">
-                        {% csrf_token %}
-                        <input type="hidden" name="quantity" value="1">
-                        <button type="submit" class="add-to-cart-btn">
-                            <i class="fas fa-cart-plus me-1"></i>
-                            Добавить в корзину
-                        </button>
-                    </form>
-                {% else %}
-                    <button type="button" class="add-to-cart-btn" disabled>
-                        <i class="fas fa-ban me-1"></i>
-                        Товар недоступен
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-catalog-content" id="mainContent">
+        <!-- Search and Filters -->
+        <div class="search-form">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold text-primary mb-3">
+                        <i class="fas fa-search me-2"></i>
+                        Поиск товаров
+                    </label>
+                    <input type="text" name="search" class="form-control search-input" 
+                           placeholder="Введите название товара, артикул или описание..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn search-btn w-100">
+                        <i class="fas fa-search me-2"></i>Найти товары
                     </button>
-                {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Search Results Info -->
+        {% if search_query %}
+        <div class="results-info">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-3 fs-5"></i>
+                <div>
+                    <strong>Результаты поиска по запросу:</strong> "{{ search_query }}"
+                    <div class="small mt-1">Найдено товаров: {{ products.count }}</div>
+                </div>
             </div>
         </div>
-    </div>
-    {% empty %}
-    <!-- Empty State -->
-    <div class="empty-state">
-        <div class="empty-icon">
-            <i class="fas fa-search-minus"></i>
+        {% endif %}
+
+        <!-- Current Filter Info -->
+        {% if selected_tag_obj %}
+        <div class="results-info">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-filter me-3 fs-5"></i>
+                    <div>
+                        <strong>Фильтр по категории:</strong> {{ selected_tag_obj.get_display_name }}
+                        <div class="small mt-1">Найдено товаров: {{ products.count }}</div>
+                    </div>
+                </div>
+                <a href="{% url 'rental:product_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Очистить фильтр
+                </a>
+            </div>
         </div>
-        <h3 class="empty-title">Товары не найдены</h3>
-        <p class="empty-description">
-            К сожалению, по вашему запросу товары не найдены. 
-            Попробуйте изменить параметры поиска или выберите другую категорию.
-        </p>
-        <a href="{% url 'rental:product_list' %}" class="reset-btn">
-            <i class="fas fa-refresh me-2"></i>Показать все товары
-        </a>
+        {% endif %}
+
+        <!-- Products Grid -->
+        <div class="products-grid">
+            {% for product in products %}
+            <div class="product-card" data-product-id="{{ product.id }}" onclick="window.location.href='{% url 'rental:product_detail' product.id %}'">
+                <!-- Product Image -->
+                <div class="product-image-container">
+                    {% if product.photo %}
+                        <img src="{{ product.photo.url }}" class="product-image" alt="{{ product.name }}">
+                    {% else %}
+                        <div class="no-image">
+                            <div>
+                                <i class="fas fa-camera fa-2x mb-2 d-block"></i>
+                                <small>Фото скоро появится</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Status Badge -->
+                    <div class="product-status {% if product.available_quantity <= 0 %}status-out{% elif product.available_quantity <= 3 %}status-low{% else %}status-available{% endif %}">
+                        {% if product.available_quantity <= 0 %}
+                            <i class="fas fa-times-circle me-1"></i>Нет в наличии
+                        {% elif product.available_quantity <= 3 %}
+                            <i class="fas fa-exclamation-triangle me-1"></i>Осталось {{ product.available_quantity }}
+                        {% else %}
+                            <i class="fas fa-check-circle me-1"></i>В наличии: {{ product.available_quantity }}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Quick Info Overlay -->
+                    <div class="product-overlay">
+                        <div class="small">
+                            <strong><i class="fas fa-barcode me-1"></i>{{ product.article }}</strong>
+                        </div>
+                        <div class="small mt-1 opacity-75">
+                            <i class="fas fa-map-marker-alt me-1"></i>{{ product.shelf }}
+                        </div>
+                        {% if product.tags.exists %}
+                            <div class="small mt-1 opacity-75">
+                                <i class="fas fa-tags me-1"></i>
+                                {% for tag in product.tags.all %}
+                                    {{ tag.get_display_name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Product Content -->
+                <div class="product-content">
+                    <h3 class="product-title">{{ product.get_display_name }}</h3>
+                    <div class="product-article">
+                        <i class="fas fa-hashtag me-1"></i>{{ product.article }}
+                    </div>
+                    <div class="product-price">
+                        {{ product.daily_price|format_price }} сум<small class="text-muted">/день</small>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="product-actions">
+                        {% if product.available_quantity > 0 %}
+                            <form method="post" action="{% url 'rental:add_to_cart' product.id %}" 
+                                  class="add-to-cart-form flex-fill" onclick="event.stopPropagation();">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="add-to-cart-btn">
+                                    <i class="fas fa-cart-plus me-1"></i>
+                                    Добавить в корзину
+                                </button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="add-to-cart-btn" disabled>
+                                <i class="fas fa-ban me-1"></i>
+                                Товар недоступен
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-search-minus"></i>
+                </div>
+                <h3 class="empty-title">Товары не найдены</h3>
+                <p class="empty-description">
+                    К сожалению, по вашему запросу товары не найдены. 
+                    Попробуйте изменить параметры поиска или выберите другую категорию.
+                </p>
+                <a href="{% url 'rental:product_list' %}" class="reset-btn">
+                    <i class="fas fa-refresh me-2"></i>Показать все товары
+                </a>
+            </div>
+            {% endfor %}
+        </div>
     </div>
-    {% endfor %}
 </div>
 
 <script>
+// Global variables
+let sidebarOpen = false;
+
+// Toggle sidebar
+function toggleSidebar() {
+    const sidebar = document.getElementById('catalogSidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    sidebarOpen = !sidebarOpen;
+    
+    if (sidebarOpen) {
+        sidebar.classList.add('show');
+        mainContent.classList.add('sidebar-open');
+        toggleBtn.classList.add('open');
+        
+        // Add overlay on mobile
+        if (window.innerWidth <= 768) {
+            overlay.classList.add('active');
+        }
+    } else {
+        sidebar.classList.remove('show');
+        mainContent.classList.remove('sidebar-open');
+        toggleBtn.classList.remove('open');
+        overlay.classList.remove('active');
+    }
+}
+
+// Toggle tag children
+function toggleTagChildren(tagId, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const tagItem = event.currentTarget;
+    const childrenContainer = document.getElementById(`children-${tagId}`);
+    
+    if (!childrenContainer) return;
+    
+    const isExpanded = tagItem.classList.contains('expanded');
+    
+    if (isExpanded) {
+        // If already expanded, navigate to the tag filter
+        window.location.href = `?tag=${tagId}`;
+    } else {
+        // Collapse all other expanded items first
+        document.querySelectorAll('.tag-item.has-children.expanded').forEach(item => {
+            item.classList.remove('expanded');
+        });
+        document.querySelectorAll('.tag-children.expanded').forEach(container => {
+            container.classList.remove('expanded');
+        });
+        
+        // Expand this item
+        tagItem.classList.add('expanded');
+        childrenContainer.classList.add('expanded');
+    }
+}
+
+// Sidebar search functionality
+document.getElementById('sidebarSearchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const query = e.target.value.trim();
+        if (query.length > 0) {
+            window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
+        }
+    }
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (window.innerWidth > 768) {
+        // Remove overlay on desktop
+        overlay.classList.remove('active');
+    } else if (sidebarOpen) {
+        // Add overlay on mobile if sidebar is open
+        overlay.classList.add('active');
+    }
+});
+
+// AJAX form submissions for add to cart
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle AJAX form submissions for add to cart
     document.querySelectorAll('.add-to-cart-form').forEach(function(form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -591,6 +958,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Auto-open sidebar on desktop
+    if (window.innerWidth > 768) {
+        toggleSidebar();
+    }
 });
 
 // Update cart counter
@@ -652,3 +1024,4 @@ style.textContent = `
 document.head.appendChild(style);
 </script>
 {% endblock %}
+                
