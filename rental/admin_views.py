@@ -22,8 +22,8 @@ def admin_dashboard(request):
     # Статистика для дашборда
     total_products = Product.objects.count()
     pending_orders = Order.objects.filter(status='pending').count()
-    active_rentals = Order.objects.filter(status='in_rent').count()
-    rejected_orders = Order.objects.filter(status='rejected').count()  # НОВОЕ
+    confirmed_orders = Order.objects.filter(status='confirmed').count()
+    rejected_orders = Order.objects.filter(status='rejected').count()
     total_revenue = sum(order.total_amount for order in Order.objects.filter(payment_status='paid'))
     
     recent_orders = Order.objects.all()[:5]
@@ -31,7 +31,7 @@ def admin_dashboard(request):
     context = {
         'total_products': total_products,
         'pending_orders': pending_orders,
-        'active_rentals': active_rentals,
+        'confirmed_orders': confirmed_orders,
         'rejected_orders': rejected_orders,
         'total_revenue': total_revenue,
         'recent_orders': recent_orders,
@@ -74,8 +74,8 @@ def update_order_status(request, order_id):
         new_status = request.POST.get('status')
         new_payment_status = request.POST.get('payment_status')
         
-        # ИСПРАВЛЕНО: Проверяем, не пытается ли пользователь изменить завершенную или отклоненную заявку
-        if order.status in ['completed', 'rejected']:
+        # Проверяем, не пытается ли пользователь изменить завершенную или отклоненную заявку
+        if order.status in ['completed', 'rejected'] and new_status:
             return JsonResponse({
                 'success': False, 
                 'error': 'Нельзя изменить статус завершенной или отклоненной заявки!'
@@ -83,7 +83,8 @@ def update_order_status(request, order_id):
         
         old_status = order.status
         
-        if new_status:
+        # Обрабатываем изменение статуса только если он передан и заявка не завершена/отклонена
+        if new_status and old_status not in ['completed', 'rejected']:
             # Логика изменения статусов с правильным управлением товарами
             if old_status == 'pending' and new_status == 'confirmed':
                 # Проверяем доступность всех товаров
@@ -100,40 +101,38 @@ def update_order_status(request, order_id):
                     product.available_quantity -= item.quantity
                     product.save()
                     
-            elif old_status == 'confirmed' and new_status == 'in_rent':
-                pass
-                
-            elif (old_status == 'in_rent' or old_status == 'confirmed') and new_status == 'completed':
+            elif old_status == 'confirmed' and new_status == 'completed':
+                # При завершении возвращаем товары на склад
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
                     
             elif old_status == 'confirmed' and new_status == 'pending':
+                # Возврат товаров при откате подтверждения
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
                     
             elif old_status == 'pending' and new_status == 'rejected':
+                # При отклонении из ожидания товары не нужно возвращать (их и не списывали)
                 pass
                 
             elif old_status == 'confirmed' and new_status == 'rejected':
+                # При отклонении из подтвержденного состояния возвращаем товары
                 for item in order.items.all():
                     product = item.product
                     product.available_quantity += item.quantity
                     product.save()
-                    
-            elif new_status == 'confirmed':
-                pass
             
             order.status = new_status
         
+        # Статус оплаты можно менять всегда, вне зависимости от статуса заявки
         if new_payment_status:
             order.payment_status = new_payment_status
         
         order.save()
-        messages.success(request, 'Статус заявки обновлен')
         
         return JsonResponse({'success': True})
     
@@ -250,7 +249,6 @@ def product_management(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Поиск без учета регистра
         search_query = search_query.strip()
         products = products.filter(
             Q(name__icontains=search_query) |
@@ -299,7 +297,6 @@ def edit_product(request, product_id):
     
     return render(request, 'rental/admin/edit_product.html', {'form': form, 'product': product})
 
-# НОВАЯ ФУНКЦИЯ: Удаление товара
 @user_passes_test(is_admin)
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -308,7 +305,7 @@ def delete_product(request, product_id):
         # Проверяем, используется ли товар в активных заявках
         active_orders = OrderItem.objects.filter(
             product=product,
-            order__status__in=['pending', 'confirmed', 'in_rent']
+            order__status__in=['pending', 'confirmed']
         ).count()
         
         if active_orders > 0:
@@ -323,7 +320,7 @@ def delete_product(request, product_id):
     # Подсчитываем использование товара
     active_orders = OrderItem.objects.filter(
         product=product,
-        order__status__in=['pending', 'confirmed', 'in_rent']
+        order__status__in=['pending', 'confirmed']
     ).count()
     
     context = {
@@ -338,7 +335,6 @@ def inventory_view(request):
     
     search_query = request.GET.get('search', '')
     if search_query:
-        # ИСПРАВЛЕНО: Поиск без учета регистра
         search_query = search_query.strip()
         products = products.filter(
             Q(name__icontains=search_query) |
@@ -391,14 +387,13 @@ def admin_create_order(request):
                         'products': Product.objects.filter(available_quantity__gt=0)
                     })
             
-            # ИСПРАВЛЕНО: Рассчитываем общую сумму правильно
+            # Рассчитываем общую сумму
             total = 0
             rental_days = (order.rental_end - order.rental_start).days + 1
             
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
-                    # ИСПРАВЛЕНО: Цена за день * количество * количество дней из заказа
                     total += product.daily_price * item['quantity'] * rental_days
                 except Product.DoesNotExist:
                     pass
@@ -414,7 +409,6 @@ def admin_create_order(request):
                         order=order,
                         product=product,
                         quantity=item['quantity'],
-                        # ИСПРАВЛЕНО: Цена за единицу товара за весь период аренды
                         price=product.daily_price * rental_days
                     )
                     
@@ -739,7 +733,6 @@ def edit_order(request, order_id):
         form = OrderForm(instance=order)
     
     # Получаем все товары с доступным количеством
-    # ИСПРАВЛЕНО: добавляем товары из текущей заявки к доступным
     all_products = Product.objects.all()
     
     # Получаем текущие товары в заявке
@@ -932,9 +925,6 @@ def download_barcode(request, product_id):
         # Открываем изображение для добавления дополнительной информации
         buffer.seek(0)
         img = Image.open(buffer)
-        
-        # Можно добавить название товара и артикул под штрих-кодом
-        # (требует дополнительной работы с PIL)
         
         # Сохраняем финальное изображение
         final_buffer = BytesIO()

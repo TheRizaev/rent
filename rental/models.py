@@ -182,6 +182,7 @@ class Product(models.Model):
         verbose_name_plural = 'Товары'
 
 class Order(models.Model):
+    # ИСПРАВЛЕНО: Убрали статус 'in_rent'
     STATUS_CHOICES = [
         ('pending', 'Ожидает подтверждения'),
         ('confirmed', 'Подтверждена'),

@@ -1,7 +1,11 @@
 from django.urls import path
 from . import admin_views
+from . import admin_auth_views
 
 urlpatterns = [
+    path('login/', admin_auth_views.admin_login_view, name='admin_login'),
+    path('logout/', admin_auth_views.admin_logout_view, name='admin_logout'),
+
     path('', admin_views.admin_dashboard, name='admin_dashboard'),
     path('orders/', admin_views.admin_orders, name='admin_orders'),
     path('orders/<int:order_id>/', admin_views.admin_order_detail, name='admin_order_detail'),

@@ -43,15 +43,15 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card-4 h-100">
+        <div class="card stat-card-3 h-100">
             <div class="card-body">
                 <div class="row">
                     <div class="col">
-                        <h5 class="card-title text-uppercase text-muted mb-0">Выручка</h5>
-                        <span class="h2 font-weight-bold mb-0">{{ total_revenue }} сум</span>
+                        <h5 class="card-title text-uppercase text-muted mb-0">Подтверждены</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ confirmed_orders }}</span>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-ruble-sign fa-2x"></i>
+                        <i class="fas fa-check-circle fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -104,11 +104,9 @@
                                 <td>{{ order.total_amount }} сум</td>
                                 <td>
                                     {% if order.status == 'pending' %}
-                                        <span class="badge bg-warning">Ожидает</span>
+                                        <span class="badge bg-warning text-dark">Ожидает</span>
                                     {% elif order.status == 'confirmed' %}
                                         <span class="badge bg-info">Подтверждена</span>
-                                    {% elif order.status == 'in_rent' %}
-                                        <span class="badge bg-primary">В аренде</span>
                                     {% elif order.status == 'completed' %}
                                         <span class="badge bg-success">Завершена</span>
                                     {% elif order.status == 'rejected' %}

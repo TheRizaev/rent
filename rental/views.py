@@ -613,7 +613,7 @@ def download_order_pdf(request, order_id):
         alignment=TA_RIGHT
     )
     
-    footer_text = f"Дата формирования документа: {timezone.now().strftime('%d.%m.%Y %H:%M')}"
+    footer_text = f"Дата формирования документа: {(timezone.now() + timedelta(hours=5)).strftime('%d.%m.%Y %H:%M')}"
     story.append(Paragraph(footer_text, footer_style))
     
     # Генерируем PDF

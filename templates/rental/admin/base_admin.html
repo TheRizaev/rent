@@ -372,11 +372,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'admin_create_order' %}">
-                    <i class="fas fa-plus-circle"></i> Создать заявку
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link" href="{% url 'storage_management' %}">
                     <i class="fas fa-warehouse"></i> Управление стойками
                 </a>
@@ -396,16 +391,11 @@
                     <i class="fas fa-tags"></i> Управление тегами
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'inventory_view' %}">
-                    <i class="fas fa-search"></i> Склад
-                </a>
-            </li>
-            <li class="nav-item">
+            {% comment %} <li class="nav-item">
                 <a class="nav-link" href="{% url 'barcode_scanner' %}">
                     <i class="fas fa-barcode"></i> Сканер штрих-кодов
                 </a>
-            </li>
+            </li> {% endcomment %}
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'print_all_barcodes' %}">
                     <i class="fas fa-print"></i> Печать штрих-кодов
@@ -416,8 +406,8 @@
                     <i class="fas fa-home"></i> На сайт
                 </a>
             </li>
+            <hr><hr><hr><hr><hr><hr><hr>
             <li class="nav-item">
-                <!-- ИСПРАВЛЕНО: Правильная ссылка на выход с формой -->
                 <form method="post" action="{% url 'logout' %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="nav-link logout-btn border-0 bg-transparent w-100 text-start" onclick="return confirm('Вы действительно хотите выйти?')">

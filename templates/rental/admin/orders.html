@@ -5,9 +5,6 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2">Заявки</h1>
-    <a href="{% url 'admin_create_order' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Создать заявку
-    </a>
 </div>
 
 <div class="card mb-4">
@@ -18,8 +15,8 @@
                     <option value="">Все статусы</option>
                     <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
                     <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                    <option value="in_rent" {% if status_filter == 'in_rent' %}selected{% endif %}>В аренде</option>
                     <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Завершена</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Отклонена</option>
                 </select>
             </div>
             <div class="col-md-6">
@@ -58,27 +55,26 @@
                         <td>{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</td>
                         <td>{{ order.total_amount }} сум</td>
                         <td>
-                            {% if order.status == 'completed' %}
+                            {% if order.status == 'pending' %}
+                                <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                                    <i class="fas fa-clock me-1"></i>Ожидает подтверждения
+                                </span>
+                            {% elif order.status == 'confirmed' %}
+                                <span class="badge bg-info fs-6 px-3 py-2">
+                                    <i class="fas fa-check me-1"></i>Подтверждена
+                                </span>
+                            {% elif order.status == 'completed' %}
                                 <span class="badge bg-success fs-6 px-3 py-2">
                                     <i class="fas fa-check-circle me-1"></i>Завершена
                                 </span>
-                                <small class="text-muted d-block">Изменение запрещено</small>
                             {% elif order.status == 'rejected' %}
                                 <span class="badge bg-danger fs-6 px-3 py-2">
                                     <i class="fas fa-times-circle me-1"></i>Отклонена
                                 </span>
-                                <small class="text-muted d-block">Изменение запрещено</small>
-                            {% else %}
-                                <select class="form-select form-select-sm status-select" data-order-id="{{ order.id }}" data-original-value="{{ order.status }}">
-                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает</option>
-                                    <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                    <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
-                                    <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
-                                    <option value="rejected" {% if order.status == 'rejected' %}selected{% endif %}>Отклонена</option>
-                                </select>
                             {% endif %}
                         </td>
                         <td>
+                            <!-- ИСПРАВЛЕНО: Статус оплаты можно менять для всех заявок -->
                             <select class="form-select form-select-sm payment-select" data-order-id="{{ order.id }}" data-original-value="{{ order.payment_status }}">
                                 <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>Не оплачена</option>
                                 <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>Оплачена</option>
@@ -123,22 +119,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
-    // Обработка изменения статуса заявки и оплаты
-    document.querySelectorAll('.status-select, .payment-select').forEach(function(select) {
+    // ИСПРАВЛЕНО: Обработка изменения только статуса оплаты
+    document.querySelectorAll('.payment-select').forEach(function(select) {
         select.addEventListener('change', function() {
             const orderId = this.dataset.orderId;
-            const isStatus = this.classList.contains('status-select');
             const value = this.value;
             const originalValue = this.getAttribute('data-original-value');
             
             const formData = new FormData();
             formData.append('csrfmiddlewaretoken', getCSRFToken());
-            
-            if (isStatus) {
-                formData.append('status', value);
-            } else {
-                formData.append('payment_status', value);
-            }
+            formData.append('payment_status', value);
             
             fetch(`/superuser/orders/${orderId}/update-status/`, {
                 method: 'POST',
@@ -148,24 +138,13 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Показать уведомление об успехе
-                    showAlert('success', 'Статус успешно обновлен');
+                    showAlert('success', 'Статус оплаты успешно обновлен');
                     
                     // Обновляем оригинальное значение
                     this.setAttribute('data-original-value', value);
-                    
-                    // Если заявка завершена, перезагружаем страницу для обновления интерфейса
-                    if (value === 'completed') {
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1000);
-                    } else {
-                        setTimeout(() => {
-                            location.reload();
-                        }, 500);
-                    }
                 } else {
                     // Показать ошибку и вернуть к оригинальному значению
-                    showAlert('danger', data.error || 'Не удалось обновить статус');
+                    showAlert('danger', data.error || 'Не удалось обновить статус оплаты');
                     
                     // Возвращаем к оригинальному значению
                     this.value = originalValue;
@@ -173,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                showAlert('danger', 'Ошибка при обновлении статуса');
+                showAlert('danger', 'Ошибка при обновлении статуса оплаты');
                 
                 // Возвращаем к оригинальному значению
                 this.value = originalValue;
@@ -201,3 +180,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+                

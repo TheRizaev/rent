@@ -174,7 +174,6 @@
                             <select name="status" class="form-select" id="orderStatus">
                                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Ожидает подтверждения</option>
                                 <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Подтверждена</option>
-                                <option value="in_rent" {% if order.status == 'in_rent' %}selected{% endif %}>В аренде</option>
                                 <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Завершена</option>
                                 <option value="rejected" {% if order.status == 'rejected' %}selected{% endif %}>Отклонена</option>
                             </select>
@@ -186,7 +185,7 @@
                     </form>
                 {% endif %}
                 
-                <!-- Статус оплаты можно изменять всегда -->
+                <!-- ИСПРАВЛЕНО: Статус оплаты можно изменять всегда -->
                 <form id="paymentForm">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -255,7 +254,7 @@ document.getElementById('statusForm')?.addEventListener('submit', function(e) {
 });
 {% endif %}
 
-// Обработка формы статуса оплаты
+// ИСПРАВЛЕНО: Обработка формы статуса оплаты - можно менять всегда
 document.getElementById('paymentForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     
