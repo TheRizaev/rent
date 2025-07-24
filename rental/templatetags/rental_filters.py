@@ -58,7 +58,6 @@ def add(value, arg):
     
 @register.filter
 def format_price(value):
-    """Форматирует цену с разделителями тысяч"""
     if value is None:
         return "0"
     
@@ -69,11 +68,10 @@ def format_price(value):
         elif isinstance(value, Decimal):
             value = float(value)
         
-        # Убираем дробную часть если она .00
-        if value == int(value):
-            value = int(value)
-            return f"{value:,}".replace(",", ".")
-        else:
-            return f"{value:,.2f}".replace(",", ".")
+        # Округляем до целого числа
+        value = int(round(value))
+        
+        # Форматируем с пробелами как разделителями тысяч
+        return f"{value:,}".replace(",", " ")
     except (ValueError, TypeError):
         return str(value)

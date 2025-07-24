@@ -63,26 +63,7 @@
             gap: 1rem;
         }
 
-        .mobile-menu-toggle {
-            background: var(--accent-color);
-            border: none;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .mobile-menu-toggle:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-        }
-
-        .catalog-toggle, .cart-btn, .admin-btn {
+        .cart-btn {
             background: var(--accent-color);
             border: none;
             color: white;
@@ -97,7 +78,7 @@
             text-decoration: none;
         }
 
-        .catalog-toggle:hover, .cart-btn:hover, .admin-btn:hover {
+        .cart-btn:hover {
             background: #2980b9;
             color: white;
             transform: translateY(-2px);
@@ -119,80 +100,62 @@
             justify-content: center;
         }
 
-        /* Desktop Navigation */
-        .desktop-nav {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        /* Mobile Navigation */
-        .mobile-nav {
-            position: fixed;
-            top: var(--header-height);
-            left: -100%;
-            width: 100%;
-            height: calc(100vh - var(--header-height));
-            background: white;
-            z-index: 999;
-            transition: left 0.3s ease;
-            padding: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .mobile-nav.open {
-            left: 0;
-        }
-
-        .mobile-nav-item {
-            display: block;
-            padding: 1rem;
-            color: var(--text-color);
-            text-decoration: none;
-            border-bottom: 1px solid #eee;
-            transition: all 0.3s ease;
-        }
-
-        .mobile-nav-item:hover {
-            color: var(--accent-color);
-            background: #f8f9fa;
-        }
-
         /* Sidebar Catalog */
         .catalog-sidebar {
             position: fixed;
             top: var(--header-height);
-            left: calc(-1 * var(--sidebar-width));
+            left: 0;
             width: var(--sidebar-width);
             height: calc(100vh - var(--header-height));
             background: white;
             border-right: 1px solid #dee2e6;
             z-index: 998;
-            transition: left 0.3s ease;
+            transition: transform 0.3s ease;
             overflow-y: auto;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transform: translateX(0);
         }
 
-        .catalog-sidebar.open {
-            left: 0;
+        .catalog-sidebar.collapsed {
+            transform: translateX(-100%);
         }
 
-        .catalog-overlay {
+        /* Toggle Button - Always Visible */
+        .sidebar-toggle-btn {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 997;
-            opacity: 0;
-            visibility: hidden;
+            top: 50%;
+            left: var(--sidebar-width);
+            transform: translateY(-50%);
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 0 50% 50% 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
+            z-index: 999;
+            cursor: pointer;
         }
 
-        .catalog-overlay.show {
-            opacity: 1;
-            visibility: visible;
+        .sidebar-toggle-btn.collapsed {
+            left: 0;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: #2980b9;
+            width: 45px;
+        }
+
+        .sidebar-toggle-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-toggle-btn.collapsed i {
+            transform: rotate(180deg);
         }
 
         /* Catalog Content */
@@ -256,49 +219,47 @@
         /* Main Content */
         .main-content {
             margin-top: var(--header-height);
+            margin-left: var(--sidebar-width);
             padding: 2rem;
             min-height: calc(100vh - var(--header-height));
             transition: margin-left 0.3s ease;
         }
 
-        .main-content.shifted {
-            margin-left: var(--sidebar-width);
+        .main-content.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 997;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
         }
 
         /* Mobile Styles */
         @media (max-width: 768px) {
-            :root {
-                --header-height: 70px;
-                --sidebar-width: 100vw;
-            }
-
-            .mobile-menu-toggle {
-                display: flex;
-            }
-
-            .desktop-nav {
-                display: none;
-            }
-
-            .navbar-brand {
-                font-size: 1.3rem;
-            }
-
-            .logo-img {
-                height: 30px;
+            .main-content {
+                margin-left: 0;
             }
 
             .catalog-sidebar {
-                width: 100vw;
-                left: -100vw;
+                z-index: 1001;
             }
 
-            .main-content {
-                padding: 1rem;
-            }
-
-            .main-content.shifted {
-                margin-left: 0;
+            .sidebar-toggle-btn {
+                z-index: 1002;
             }
         }
 
@@ -341,76 +302,37 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <!-- Logo -->
                 <a class="navbar-brand" href="{% url 'rental:preview' %}">
-                    <img src="{% load static %}{% static 'images/logo.png' %}" alt="Логотип" class="logo-img" style="width: 300px">
+                    <img src="{% static 'images/logo.png' %}" alt="Логотип" class="logo-img" style="width: 300px">
                 </a>
                 
-                <!-- Mobile Menu Toggle -->
-                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars"></i>
-                </button>
-                
-                <!-- Desktop Navigation Controls -->
-                <div class="desktop-nav">
-                    <button class="catalog-toggle" onclick="toggleCatalog()" title="Каталог">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                    
+                <!-- Navigation Controls -->
+                <div class="nav-controls">
                     <a href="{% url 'rental:cart' %}" class="cart-btn" title="Корзина">
                         <i class="fas fa-shopping-cart"></i>
                         {% if request.session.cart %}
                             <span class="cart-count">{{ request.session.cart|length }}</span>
                         {% endif %}
                     </a>
-                    
-                    {% if user.is_staff %}
-                        <a href="/superuser/" class="admin-btn" title="Админ панель">
-                            <i class="fas fa-cog"></i>
-                        </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobileNav">
-        <a href="{% url 'rental:product_list' %}" class="mobile-nav-item">
-            <i class="fas fa-home me-3"></i>Главная
-        </a>
-        <button onclick="toggleCatalog(); toggleMobileMenu();" class="mobile-nav-item border-0 bg-transparent text-start w-100">
-            <i class="fas fa-th-large me-3"></i>Каталог
-        </button>
-        <a href="{% url 'rental:cart' %}" class="mobile-nav-item">
-            <i class="fas fa-shopping-cart me-3"></i>Корзина
-            {% if request.session.cart %}
-                <span class="badge bg-danger ms-2">{{ request.session.cart|length }}</span>
-            {% endif %}
-        </a>
-        {% if user.is_staff %}
-            <a href="/superuser/" class="mobile-nav-item">
-                <i class="fas fa-cog me-3"></i>Админ панель
-            </a>
-        {% endif %}
-    </nav>
-
-    <!-- Catalog Overlay -->
-    <div class="catalog-overlay" id="catalogOverlay" onclick="closeCatalog()"></div>
+    <!-- Toggle Button (Always Visible) -->
+    <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">
+        <i class="fas fa-chevron-left"></i>
+    </button>
 
     <!-- Catalog Sidebar -->
     <nav class="catalog-sidebar" id="catalogSidebar">
         <!-- Catalog Header -->
         <div class="catalog-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="catalog-title mb-1">
-                        <i class="fas fa-th-large me-2"></i>
-                        Каталог товаров
-                    </h2>
-                    <p class="mb-0 opacity-75">Выберите категорию</p>
-                </div>
-                <button class="btn btn-outline-light btn-sm" onclick="closeCatalog()">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div>
+                <h2 class="catalog-title mb-1">
+                    <i class="fas fa-th-large me-2"></i>
+                    Каталог товаров
+                </h2>
+                <p class="mb-0 opacity-75">Выберите категорию</p>
             </div>
         </div>
 
@@ -447,6 +369,9 @@
         </div>
     </nav>
 
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <!-- Messages -->
@@ -469,118 +394,51 @@
     
     <script>
         // Global variables
-        let catalogOpen = false;
-        let mobileMenuOpen = false;
+        let sidebarCollapsed = false;
 
-        // Toggle catalog sidebar
-        function toggleCatalog() {
+        // Toggle sidebar
+        function toggleSidebar() {
             const sidebar = document.getElementById('catalogSidebar');
-            const overlay = document.getElementById('catalogOverlay');
             const mainContent = document.getElementById('mainContent');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const overlay = document.getElementById('sidebarOverlay');
             
-            catalogOpen = !catalogOpen;
+            sidebarCollapsed = !sidebarCollapsed;
             
-            if (catalogOpen) {
-                openCatalog();
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+                toggleBtn.classList.add('collapsed');
+                overlay.classList.remove('active');
             } else {
-                closeCatalog();
-            }
-        }
-
-        // Open catalog
-        function openCatalog() {
-            const sidebar = document.getElementById('catalogSidebar');
-            const overlay = document.getElementById('catalogOverlay');
-            const mainContent = document.getElementById('mainContent');
-            
-            catalogOpen = true;
-            sidebar.classList.add('open');
-            overlay.classList.add('show');
-            
-            if (window.innerWidth > 768) {
-                mainContent.classList.add('shifted');
-            }
-            
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close catalog
-        function closeCatalog() {
-            const sidebar = document.getElementById('catalogSidebar');
-            const overlay = document.getElementById('catalogOverlay');
-            const mainContent = document.getElementById('mainContent');
-            
-            catalogOpen = false;
-            sidebar.classList.remove('open');
-            overlay.classList.remove('show');
-            mainContent.classList.remove('shifted');
-            
-            document.body.style.overflow = '';
-        }
-
-        // Toggle mobile menu
-        function toggleMobileMenu() {
-            const mobileNav = document.getElementById('mobileNav');
-            mobileMenuOpen = !mobileMenuOpen;
-            
-            if (mobileMenuOpen) {
-                mobileNav.classList.add('open');
-                document.body.style.overflow = 'hidden';
-            } else {
-                mobileNav.classList.remove('open');
-                document.body.style.overflow = '';
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
+                toggleBtn.classList.remove('collapsed');
+                
+                // Add overlay on mobile
+                if (window.innerWidth <= 768) {
+                    overlay.classList.add('active');
+                }
             }
         }
 
         // Handle window resize
         window.addEventListener('resize', function() {
-            const mainContent = document.getElementById('mainContent');
-            const mobileNav = document.getElementById('mobileNav');
+            const overlay = document.getElementById('sidebarOverlay');
             
             if (window.innerWidth > 768) {
-                // Desktop
-                mobileNav.classList.remove('open');
-                mobileMenuOpen = false;
-                
-                if (catalogOpen) {
-                    mainContent.classList.add('shifted');
-                }
-            } else {
-                // Mobile
-                mainContent.classList.remove('shifted');
+                // Remove overlay on desktop
+                overlay.classList.remove('active');
+            } else if (!sidebarCollapsed) {
+                // Add overlay on mobile if sidebar is open
+                overlay.classList.add('active');
             }
-            
-            // Reset overflow if no menus are open
-            if (!catalogOpen && !mobileMenuOpen) {
-                document.body.style.overflow = '';
-            }
-        });
-
-        // Close menus on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                if (catalogOpen) {
-                    closeCatalog();
-                }
-                if (mobileMenuOpen) {
-                    toggleMobileMenu();
-                }
-            }
-        });
-
-        // Close mobile menu when clicking on links
-        document.querySelectorAll('.mobile-nav-item').forEach(function(item) {
-            item.addEventListener('click', function() {
-                if (mobileMenuOpen && this.tagName === 'A') {
-                    toggleMobileMenu();
-                }
-            });
         });
 
         // Catalog search functionality
         document.getElementById('catalogSearch').addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
-            if (query.length > 0) {
+            if (query.length > 2) {
                 // Redirect to product list with search query
                 window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
             }
@@ -594,6 +452,12 @@
                     window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
                 }
             }
+        });
+
+        // Initialize sidebar state - open by default
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar is open by default (no collapsed class)
+            sidebarCollapsed = false;
         });
     </script>
     

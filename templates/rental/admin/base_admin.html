@@ -372,6 +372,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin_create_order' %}">
+                    <i class="fas fa-plus-circle"></i> Создать заявку
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="{% url 'storage_management' %}">
                     <i class="fas fa-warehouse"></i> Управление стойками
                 </a>
@@ -391,11 +396,6 @@
                     <i class="fas fa-tags"></i> Управление тегами
                 </a>
             </li>
-            {% comment %} <li class="nav-item">
-                <a class="nav-link" href="{% url 'barcode_scanner' %}">
-                    <i class="fas fa-barcode"></i> Сканер штрих-кодов
-                </a>
-            </li> {% endcomment %}
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'print_all_barcodes' %}">
                     <i class="fas fa-print"></i> Печать штрих-кодов

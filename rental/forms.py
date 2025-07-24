@@ -48,12 +48,12 @@ class ProductForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Убираем поле артикула из формы, так как оно генерируется автоматически
-        if 'article' in self.fields:
-            del self.fields['article']
         
         # Делаем поле штрих-кода необязательным
         self.fields['barcode'].required = False
+        
+        # Добавляем help_text для поля штрих-кода
+        self.fields['barcode'].help_text = 'Штрих-код будет использован как артикул. При пустом поле генерируется автоматически.'
         
         if self.instance and self.instance.pk:
             self.initial['name'] = self.instance.get_display_name()

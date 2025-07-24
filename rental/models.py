@@ -115,7 +115,7 @@ class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     photo = models.ImageField(upload_to='products/', verbose_name='Фото')
     article = models.CharField(max_length=50, unique=True, verbose_name='Артикул', blank=True)
-    barcode = models.CharField(max_length=13, unique=True, verbose_name='Штрих-код', blank=True)  # НОВОЕ ПОЛЕ
+    barcode = models.CharField(max_length=13, unique=True, verbose_name='Штрих-код', blank=True)
     description = models.TextField(blank=True, verbose_name='Описание')
     quantity = models.IntegerField(default=0, verbose_name='Количество')
     available_quantity = models.IntegerField(default=0, verbose_name='Доступное количество')
@@ -123,13 +123,6 @@ class Product(models.Model):
     daily_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена за день')
     shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, verbose_name='Место хранения')
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    def generate_unique_article(self):
-        """Генерирует уникальный 8-значный артикул"""
-        while True:
-            article = ''.join([str(random.randint(0, 9)) for _ in range(8)])
-            if not Product.objects.filter(article=article).exists():
-                return article
     
     def generate_ean13_barcode(self):
         """Генерирует уникальный 13-значный EAN-13 штрих-код"""
@@ -151,19 +144,17 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         self.name = self.name.strip().lower()
         
-        if not self.article:
-            self.article = self.generate_unique_article()
-        else:
-            self.article = self.article.strip().upper()
-        
+        # Если штрих-код не указан, генерируем его
         if not self.barcode:
             self.barcode = self.generate_ean13_barcode()
+        
+        # Артикул всегда равен штрих-коду
+        self.article = self.barcode
         
         if self.description:
             self.description = self.description.strip().lower()
         super().save(*args, **kwargs)
 
-    
     def get_display_name(self):
         """Возвращает название с заглавной буквы"""
         return self.name.capitalize()
