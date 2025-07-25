@@ -364,13 +364,11 @@ def admin_create_order(request):
         if form.is_valid():
             order = form.save(commit=False)
             order.created_by_admin = True
-            order.status = 'confirmed'  # Автоматически подтверждаем заявки админа
+            order.status = 'confirmed' 
             
-            # Получаем товары из POST данных
             cart_data = request.POST.get('cart_data', '[]')
             cart_items = json.loads(cart_data)
             
-            # Проверяем доступность товаров
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
@@ -387,7 +385,6 @@ def admin_create_order(request):
                         'products': Product.objects.filter(available_quantity__gt=0)
                     })
             
-            # Рассчитываем общую сумму
             total = 0
             rental_days = (order.rental_end - order.rental_start).days + 1
             
@@ -401,7 +398,6 @@ def admin_create_order(request):
             order.total_amount = total
             order.save()
             
-            # Создаем позиции заявки и списываем товары
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
@@ -424,7 +420,7 @@ def admin_create_order(request):
     else:
         form = OrderForm()
     
-    products = Product.objects.filter(available_quantity__gt=0)
+    products = Product.objects.all().order_by('name')
     
     context = {
         'form': form,
@@ -670,25 +666,44 @@ def edit_order(request, order_id):
             cart_data = request.POST.get('cart_data', '[]')
             cart_items = json.loads(cart_data)
             
-            # Возвращаем товары из старой заявки на склад
-            for item in order.items.all():
-                product = item.product
-                product.available_quantity += item.quantity
-                product.save()
+            # ВАЖНО: При редактировании pending заявки товары НЕ БЫЛИ списаны с available_quantity
+            # поэтому мы НЕ возвращаем их на склад, просто удаляем старые позиции заявки
             
-            # Удаляем старые позиции
+            # Сохраняем информацию о старых товарах для правильного расчета доступности
+            old_items = {}
+            for item in order.items.all():
+                old_items[item.product.id] = item.quantity
+            
+            # Удаляем старые позиции заявки
             order.items.all().delete()
             
             # Проверяем доступность новых товаров
             for item in cart_items:
                 try:
                     product = Product.objects.get(id=item['product_id'])
+                    
+                    # При проверке доступности учитываем, что старые товары не были списаны
+                    # available_quantity уже включает в себя товары из старой заявки
                     if product.available_quantity < item['quantity']:
-                        messages.error(request, f'Недостаточно товара "{product.name}" на складе. Доступно: {product.available_quantity}')
+                        messages.error(request, f'Недостаточно товара "{product.name}" на складе. Доступно: {product.available_quantity}, требуется: {item["quantity"]}')
+                        
+                        # Восстанавливаем старые позиции заявки
+                        for old_product_id, old_quantity in old_items.items():
+                            try:
+                                old_product = Product.objects.get(id=old_product_id)
+                                OrderItem.objects.create(
+                                    order=order,
+                                    product=old_product,
+                                    quantity=old_quantity,
+                                    price=old_product.daily_price * ((order.rental_end - order.rental_start).days + 1)
+                                )
+                            except Product.DoesNotExist:
+                                pass
+                        
                         return render(request, 'rental/admin/edit_order.html', {
                             'form': form,
                             'order': order,
-                            'products': Product.objects.filter(available_quantity__gt=0),
+                            'products': Product.objects.all(),
                             'current_items': []
                         })
                 except Product.DoesNotExist:
@@ -696,7 +711,7 @@ def edit_order(request, order_id):
                     return render(request, 'rental/admin/edit_order.html', {
                         'form': form,
                         'order': order,
-                        'products': Product.objects.filter(available_quantity__gt=0),
+                        'products': Product.objects.all(),
                         'current_items': []
                     })
             
@@ -722,7 +737,7 @@ def edit_order(request, order_id):
                         order=order,
                         product=product,
                         quantity=item['quantity'],
-                        price=product.daily_price * rental_days
+                        price=product.daily_price * rental_days  # Цена за единицу за весь период
                     )
                 except Product.DoesNotExist:
                     pass
@@ -731,11 +746,9 @@ def edit_order(request, order_id):
             return redirect('admin_order_detail', order_id=order.id)
     else:
         form = OrderForm(instance=order)
-    
-    # Получаем все товары с доступным количеством
+
     all_products = Product.objects.all()
     
-    # Получаем текущие товары в заявке
     current_items = []
     for item in order.items.all():
         current_items.append({
@@ -744,18 +757,12 @@ def edit_order(request, order_id):
             'price': float(item.product.daily_price),
             'quantity': item.quantity
         })
-        
-        # Временно возвращаем товары на склад для корректного отображения доступности
-        item.product.available_quantity += item.quantity
-        item.product.save()
     
-    # Фильтруем товары с доступным количеством
-    products = all_products.filter(available_quantity__gt=0)
     
     context = {
         'form': form,
         'order': order,
-        'products': products,
+        'products': all_products,
         'current_items': current_items,
     }
     return render(request, 'rental/admin/edit_order.html', context)

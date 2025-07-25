@@ -1,3 +1,4 @@
+
 {% extends 'rental/admin/base_admin.html' %}
 
 {% block title %}Создать заявку - Админ панель{% endblock %}
@@ -94,17 +95,26 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Добавить товары</h5>
+                <h5>На склад товары</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <input type="text" id="productSearch" class="form-control" placeholder="Поиск товаров по названию или артикулу...">
+                <!-- Быстрое добавление по артикулу -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="quickAddArticle" class="form-label fw-bold">
+                            <i class="fas fa-barcode"></i> Быстрое добавление по артикулу
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="quickAddArticle" class="form-control" placeholder="Введите артикул товара и нажмите Enter" maxlength="13">
+                            <button class="btn btn-success" type="button" onclick="addByArticle()">
+                                <i class="fas fa-plus"></i> Добавить
+                            </button>
+                        </div>
+                        <small class="text-muted">Товар будет добавлен в количестве 1 шт.</small>
                     </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-outline-primary w-100" onclick="searchProducts()">
-                            <i class="fas fa-search"></i> Поиск
-                        </button>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Поиск товаров</label>
+                        <input type="text" id="productSearch" class="form-control" placeholder="Поиск по названию или артикулу...">
                     </div>
                 </div>
                 
@@ -121,7 +131,9 @@
                         </thead>
                         <tbody id="productsTable">
                             {% for product in products %}
-                            <tr data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" data-product-price="{{ product.daily_price }}" data-available="{{ product.available_quantity }}">
+                            <tr data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" 
+                                data-product-price="{{ product.daily_price }}" data-available="{{ product.available_quantity }}"
+                                data-product-article="{{ product.article }}">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         {% if product.photo %}
@@ -131,7 +143,7 @@
                                     </div>
                                 </td>
                                 <td><code>{{ product.article }}</code></td>
-                                <td><span class="badge bg-success">{{ product.available_quantity }}</span></td>
+                                <td><span class="badge bg-success available-qty">{{ product.available_quantity }}</span></td>
                                 <td>{{ product.daily_price }} сум</td>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -190,11 +202,38 @@ function addToCart(productId) {
     }
     
     updateCartDisplay();
+    updateAvailableQuantities();
 }
 
 function removeFromCart(productId) {
     cart = cart.filter(item => item.product_id !== productId);
     updateCartDisplay();
+    updateAvailableQuantities();
+}
+
+// Новая функция для изменения количества в корзине
+function changeCartQuantity(productId, delta) {
+    const item = cart.find(item => item.product_id === productId);
+    if (!item) return;
+    
+    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+    const available = parseInt(row.dataset.available);
+    
+    const newQuantity = item.quantity + delta;
+    
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+    }
+    
+    if (newQuantity > available) {
+        alert('Недостаточно товара на складе');
+        return;
+    }
+    
+    item.quantity = newQuantity;
+    updateCartDisplay();
+    updateAvailableQuantities();
 }
 
 function updateCartDisplay() {
@@ -217,27 +256,73 @@ function updateCartDisplay() {
         total += itemTotal;
         
         html += `
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                 <div>
                     <strong>${item.name}</strong><br>
-                    <small>${item.quantity} x ${item.price} сум</small>
+                    <small>${item.quantity} x ${formatPrice(item.price)} сум</small>
                 </div>
-                <div>
-                    <strong>${itemTotal} сум</strong>
-                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(${item.product_id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <div class="d-flex align-items-center">
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button type="button" class="btn btn-outline-secondary" onclick="changeCartQuantity(${item.product_id}, -1)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="changeCartQuantity(${item.product_id}, 1)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="text-end">
+                        <strong>${formatPrice(itemTotal)} сум</strong><br>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.product_id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     });
     
     cartItems.innerHTML = html;
-    totalAmount.textContent = `${total} сум`;
+    totalAmount.textContent = `${formatPrice(total)} сум`;
     submitBtn.disabled = false;
     
     // Обновляем скрытое поле с данными корзины
     document.getElementById('cartData').value = JSON.stringify(cart);
+}
+
+// Обновление доступных количеств в таблице товаров
+function updateAvailableQuantities() {
+    // Сбрасываем все количества к исходным
+    document.querySelectorAll('#productsTable tr').forEach(row => {
+        const productId = parseInt(row.dataset.productId);
+        const originalAvailable = parseInt(row.dataset.available);
+        const cartItem = cart.find(item => item.product_id === productId);
+        const inCart = cartItem ? cartItem.quantity : 0;
+        
+        // Обновляем отображение доступного количества
+        const availableQtyElement = row.querySelector('.available-qty');
+        const quantityInput = row.querySelector(`#qty-${productId}`);
+        
+        if (availableQtyElement) {
+            availableQtyElement.textContent = originalAvailable - inCart;
+            
+            // Изменяем цвет badge в зависимости от количества
+            availableQtyElement.className = 'badge';
+            if (originalAvailable - inCart <= 0) {
+                availableQtyElement.classList.add('bg-danger');
+            } else if (originalAvailable - inCart <= 2) {
+                availableQtyElement.classList.add('bg-warning');
+            } else {
+                availableQtyElement.classList.add('bg-success');
+            }
+        }
+        
+        if (quantityInput) {
+            quantityInput.max = originalAvailable - inCart;
+            if (quantityInput.value > quantityInput.max) {
+                quantityInput.value = quantityInput.max;
+            }
+        }
+    });
 }
 
 function submitOrder() {
@@ -249,31 +334,63 @@ function submitOrder() {
     document.getElementById('orderForm').submit();
 }
 
-function searchProducts() {
-    const query = document.getElementById('productSearch').value.toLowerCase();
-    const rows = document.querySelectorAll('#productsTable tr');
+// Быстрое добавление по артикулу
+function addByArticle() {
+    const articleInput = document.getElementById('quickAddArticle');
+    const article = articleInput.value.trim();
     
-    rows.forEach(row => {
-        const productName = row.dataset.productName?.toLowerCase() || '';
-        const article = row.querySelector('code')?.textContent.toLowerCase() || '';
-        
-        if (productName.includes(query) || article.includes(query)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-// Поиск по Enter
-document.getElementById('productSearch').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        searchProducts();
+    if (!article) {
+        alert('Введите артикул товара');
+        return;
     }
-});
-
-// Инициализация
-updateCartDisplay();
+    
+    // Ищем товар по артикулу в таблице
+    const row = Array.from(document.querySelectorAll('#productsTable tr')).find(row => {
+        const rowArticle = row.dataset.productArticle;
+        return rowArticle && rowArticle.toLowerCase() === article.toLowerCase();
+    });
+    
+    if (!row) {
+        alert('Товар с артикулом "' + article + '" не найден');
+        return;
+    }
+    
+    const productId = parseInt(row.dataset.productId);
+    const productName = row.dataset.productName;
+    const productPrice = parseFloat(row.dataset.productPrice);
+    const available = parseInt(row.dataset.available);
+    
+    // Проверяем доступность
+    const existingItem = cart.find(item => item.product_id === productId);
+    const currentInCart = existingItem ? existingItem.quantity : 0;
+    
+    if (currentInCart >= available) {
+        alert('Товар недоступен для добавления (недостаточно на складе)');
+        return;
+    }
+    
+    // Добавляем товар
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cart.push({
+            product_id: productId,
+            name: productName,
+            price: productPrice,
+            quantity: 1
+        });
+    }
+    
+    // Очищаем поле ввода
+    articleInput.value = '';
+    
+    // Обновляем отображение
+    updateCartDisplay();
+    updateAvailableQuantities();
+    
+    // Показываем уведомление
+    showNotification(`Товар "${productName}" добавлен в корзину`, 'success');
+}
 
 function searchProducts() {
     const query = document.getElementById('productSearch').value.toLowerCase();
@@ -290,5 +407,45 @@ function searchProducts() {
         }
     });
 }
+
+// Функция для показа уведомлений
+function showNotification(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 3000);
+}
+
+// Обработчики событий
+document.addEventListener('DOMContentLoaded', function() {
+    // Поиск по Enter
+    document.getElementById('productSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchProducts();
+        }
+    });
+    
+    // Быстрое добавление по Enter
+    document.getElementById('quickAddArticle').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addByArticle();
+        }
+    });
+    
+    // Инициализация
+    updateCartDisplay();
+});
 </script>
 {% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'rental/admin/base_admin.html' %}
-
+{% load rental_filters %}
 {% block title %}Заявка #{{ order.id }} - Админ панель{% endblock %}
 
 {% block content %}
@@ -78,8 +78,8 @@
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Общая сумма:</strong></div>
                     <div class="col-sm-9">
-                        <span class="h5 text-success">{{ order.total_amount }} сум</span>
-                        <small class="text-muted d-block">{{ order.get_daily_average|floatformat:0 }} сум/день</small>
+                        <span class="h5 text-success">{{ order.total_amount|format_price }} сум</span>
+                        <small class="text-muted d-block">{{ order.get_daily_average|format_price }} сум/день</small>
                     </div>
                 </div>
             </div>
@@ -112,14 +112,14 @@
                                         {% endif %}
                                         <div>
                                             <strong>{{ item.product.get_display_name }}</strong><br>
-                                            <small class="text-muted">{{ item.product.daily_price }} сум/день</small>
+                                            <small class="text-muted">{{ item.product.daily_price|format_price }} сум/день</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td><code>{{ item.product.article }}</code></td>
                                 <td>{{ item.quantity }} шт.</td>
-                                <td>{{ item.price }} сум</td>
-                                <td><strong>{{ item.get_total|floatformat:2 }} сум</strong></td>
+                                <td>{{ item.price|format_price }} сум</td>
+                                <td><strong>{{ item.get_total|format_price }} сум</strong></td>
                                 <td><span class="badge bg-info">{{ item.product.shelf }}</span></td>
                             </tr>
                             {% endfor %}
@@ -127,7 +127,7 @@
                         <tfoot>
                             <tr class="table-active">
                                 <td colspan="4"><strong>Итого:</strong></td>
-                                <td><strong class="text-success">{{ order.total_amount }} сум</strong></td>
+                                <td><strong class="text-success">{{ order.total_amount|format_price }} сум</strong></td>
                                 <td></td>
                             </tr>
                         </tfoot>
