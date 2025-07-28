@@ -98,11 +98,11 @@
                         <div class="mb-3 p-3 border rounded cart-item" data-product-id="{{ item.product.id }}">
                             <div class="d-flex justify-content-between mb-1">
                                 <strong>{{ item.product.name }}</strong>
-                                <span class="text-success fw-bold item-total">{{ item.product.daily_price }} сум</span>
+                                <span class="text-success fw-bold item-total">{{ item.product.daily_price|format_price }} сум</span>
                             </div>
                             <small class="text-muted">
                                 Арт. {{ item.product.article }}<br>
-                                <span class="item-calculation">{{ item.product.daily_price }} сум/день × {{ item.quantity }} шт.</span>
+                                <span class="item-calculation">{{ item.product.daily_price|format_price }} сум/день × {{ item.quantity }} шт.</span>
                             </small>
                         </div>
                     {% endfor %}
@@ -112,11 +112,11 @@
                     <hr>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <strong>Сумма за день:</strong>
-                        <span class="h5 text-muted" id="dailyTotal">{{ total|floatformat:0 }} сум</span>
+                        <span class="h5 text-muted" id="dailyTotal">{{ total|format_price }} сум</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <strong>Итого за весь период:</strong>
-                        <strong class="text-success h4" id="grandTotal">{{ total|floatformat:0 }} сум</strong>
+                        <strong class="text-success h4" id="grandTotal">{{ total|format_price }} сум</strong>
                     </div>
                     <small class="text-muted d-block mt-1" id="totalCalculation">
                         Выберите даты аренды для расчета итоговой суммы
@@ -165,6 +165,26 @@
 let cartItems = [];
 let dailyTotal = 0;
 
+// Функция для форматирования цен (аналог format_price в Django)
+function formatPrice(price) {
+    if (price == null || price == undefined) {
+        return "0";
+    }
+    
+    try {
+        // Преобразуем в число
+        let value = parseFloat(price);
+        
+        // Округляем до целого числа
+        value = Math.round(value);
+        
+        // Форматируем с пробелами как разделителями тысяч
+        return value.toLocaleString('ru-RU').replace(/,/g, ' ');
+    } catch (error) {
+        return String(price);
+    }
+}
+
 // Инициализация данных о товарах из скрытого блока
 document.addEventListener('DOMContentLoaded', function() {
     // Собираем данные о товарах
@@ -180,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Рассчитываем общую сумму за день
     dailyTotal = cartItems.reduce((sum, item) => sum + (item.dailyPrice * item.quantity), 0);
-    document.getElementById('dailyTotal').textContent = dailyTotal.toFixed(0) + ' сум';
+    document.getElementById('dailyTotal').textContent = formatPrice(dailyTotal) + ' сум';
     
     // Добавляем обработчики событий на изменение дат
     const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
@@ -207,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Если даты уже выбраны (например, при возврате с ошибкой валидации), рассчитываем
-    if (startDateInput.value && endDateInput.value) {
+    if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
         calculateRentalDays();
     }
 });
@@ -219,7 +239,7 @@ function calculateRentalDays() {
     if (!startDateInput.value || !endDateInput.value) {
         // Если даты не выбраны, скрываем информацию
         document.getElementById('rentalDaysInfo').style.display = 'none';
-        document.getElementById('grandTotal').textContent = dailyTotal.toFixed(0) + ' сум';
+        document.getElementById('grandTotal').textContent = formatPrice(dailyTotal) + ' сум';
         document.getElementById('totalCalculation').textContent = 'Выберите даты аренды для расчета итоговой суммы';
         
         // Обновляем отображение товаров
@@ -248,10 +268,10 @@ function calculateRentalDays() {
     const grandTotal = dailyTotal * daysDiff;
     
     // Обновляем отображение
-    document.getElementById('grandTotal').textContent = grandTotal.toFixed(0) + ' сум';
+    document.getElementById('grandTotal').textContent = formatPrice(grandTotal) + ' сум';
     document.getElementById('totalCalculation').innerHTML = `
         <i class="fas fa-calculator text-primary"></i> 
-        ${dailyTotal.toFixed(0)} сум/день × ${daysDiff} дней = <strong>${grandTotal.toFixed(0)} сум</strong>
+        ${formatPrice(dailyTotal)} сум/день × ${daysDiff} дней = <strong>${formatPrice(grandTotal)} сум</strong>
     `;
     
     // Обновляем отображение каждого товара
@@ -272,15 +292,15 @@ function updateItemsDisplay(days) {
         if (itemElement) {
             const totalPrice = item.dailyPrice * item.quantity * days;
             
-            // Обновляем отображение цены
-            itemElement.querySelector('.item-total').textContent = totalPrice.toFixed(0) + ' сум';
+            // Обновляем отображение цены с форматированием
+            itemElement.querySelector('.item-total').textContent = formatPrice(totalPrice) + ' сум';
             
-            // Обновляем расчет
+            // Обновляем расчет с форматированием
             const calculation = itemElement.querySelector('.item-calculation');
             if (days > 1) {
-                calculation.innerHTML = `${item.dailyPrice} сум/день × ${item.quantity} шт. × ${days} дн.`;
+                calculation.innerHTML = `${formatPrice(item.dailyPrice)} сум/день × ${item.quantity} шт. × ${days} дн.`;
             } else {
-                calculation.innerHTML = `${item.dailyPrice} сум/день × ${item.quantity} шт.`;
+                calculation.innerHTML = `${formatPrice(item.dailyPrice)} сум/день × ${item.quantity} шт.`;
             }
         }
     });

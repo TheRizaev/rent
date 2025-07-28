@@ -111,13 +111,13 @@
                                 <div class="col-md-4">
                                     <label for="quantity" class="form-label fw-bold">Количество</label>
                                     <div class="input-group">
-                                        <button type="button" class="btn btn-outline-secondary" onclick="changeQuantity(-1)">
+                                        <button type="button" class="btn btn-outline-secondary decrease-btn" data-action="decrease" id="decreaseBtn">
                                             <i class="fas fa-minus"></i>
                                         </button>
                                         <input type="number" name="quantity" id="quantity" 
                                                class="form-control text-center" 
                                                value="1" min="1" max="{{ product.available_quantity }}">
-                                        <button type="button" class="btn btn-outline-secondary" onclick="changeQuantity(1)">
+                                        <button type="button" class="btn btn-outline-secondary increase-btn" data-action="increase" id="increaseBtn">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
@@ -139,7 +139,7 @@
                                     <span class="text-muted">Стоимость за выбранное количество:</span>
                                 </div>
                                 <div class="col-md-6 text-md-end">
-                                    <span class="h5 text-success mb-0" id="totalPrice">{{ product.daily_price }} сум</span>
+                                    <span class="h5 text-success mb-0" id="totalPrice">{{ product.daily_price|format_price }} сум</span>
                                     <small class="text-muted d-block">за день</small>
                                 </div>
                             </div>
@@ -233,6 +233,16 @@
 
 .input-group .btn {
     border-color: #ced4da;
+    transition: all 0.3s ease;
+}
+
+.input-group .btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.input-group .btn:active {
+    transform: scale(0.95);
 }
 
 .input-group .form-control:focus {
@@ -286,33 +296,77 @@
 
 {% block extra_js %}
 <script>
-const dailyPrice = {{ product.daily_price }};
-const maxQuantity = {{ product.available_quantity }};
+// Безопасная инициализация переменных
+const dailyPrice = parseFloat('{{ product.daily_price|floatformat:2|safe }}') || 0;
+const maxQuantity = parseInt('{{ product.available_quantity|floatformat:0|safe }}') || 1;
 
 // Изменение количества кнопками +/-
 function changeQuantity(delta) {
     const quantityInput = document.getElementById('quantity');
+    if (!quantityInput) {
+        console.error('Quantity input not found');
+        return;
+    }
+
     let currentQuantity = parseInt(quantityInput.value) || 1;
     let newQuantity = currentQuantity + delta;
-    
-    if (newQuantity < 1) newQuantity = 1;
-    if (newQuantity > maxQuantity) newQuantity = maxQuantity;
-    
+
+    // Проверяем границы
+    newQuantity = Math.max(1, Math.min(newQuantity, maxQuantity));
+
+    // Устанавливаем новое значение
     quantityInput.value = newQuantity;
+
+    // Обновляем цену и состояние кнопок
     updateTotalPrice();
+    updateButtonStates();
+}
+
+// Обновление состояния кнопок
+function updateButtonStates() {
+    const quantityInput = document.getElementById('quantity');
+    const decreaseBtn = document.getElementById('decreaseBtn');
+    const increaseBtn = document.getElementById('increaseBtn');
+    if (!quantityInput || !decreaseBtn || !increaseBtn) {
+        console.error('Required elements not found');
+        return;
+    }
+
+    const currentQuantity = parseInt(quantityInput.value) || 1;
+
+    // Управление кнопкой "-"
+    decreaseBtn.disabled = currentQuantity <= 1;
+    decreaseBtn.classList.toggle('opacity-50', currentQuantity <= 1);
+
+    // Управление кнопкой "+"
+    increaseBtn.disabled = currentQuantity >= maxQuantity;
+    increaseBtn.classList.toggle('opacity-50', currentQuantity >= maxQuantity);
 }
 
 // Обновление общей стоимости
 function updateTotalPrice() {
-    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    const quantityInput = document.getElementById('quantity');
+    const totalPriceElement = document.getElementById('totalPrice');
+    if (!quantityInput || !totalPriceElement) {
+        console.error('Required elements for price update not found');
+        return;
+    }
+
+    let quantity = parseInt(quantityInput.value) || 1;
+
+    // Проверяем границы
+    quantity = Math.max(1, Math.min(quantity, maxQuantity));
+    quantityInput.value = quantity;
+
     const total = dailyPrice * quantity;
-    document.getElementById('totalPrice').textContent = total.toLocaleString() + ' сум';
+    totalPriceElement.textContent = total.toLocaleString('ru-RU') + ' сум';
 }
 
 // Открытие модального окна с изображением
 function openImageModal() {
     {% if product.photo %}
-        new bootstrap.Modal(document.getElementById('imageModal')).show();
+        const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modal.show();
     {% endif %}
 }
 
@@ -320,10 +374,10 @@ function openImageModal() {
 function shareProduct() {
     if (navigator.share) {
         navigator.share({
-            title: '{{ product.name }}',
-            text: 'Посмотрите этот товар для аренды: {{ product.name }}',
+            title: '{{ product.name|safe }}',
+            text: 'Посмотрите этот товар для аренды: {{ product.name|safe }}',
             url: window.location.href
-        }).catch(console.error);
+        }).catch(error => console.error('Share error:', error));
     } else {
         navigator.clipboard.writeText(window.location.href).then(() => {
             showNotification('Ссылка скопирована в буфер обмена!', 'success');
@@ -354,56 +408,68 @@ function showNotification(message, type = 'success') {
 }
 
 // AJAX отправка формы
-document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const submitButton = this.querySelector('button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Добавляем...';
-    
-    fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
+function setupFormListener() {
+    const form = document.getElementById('addToCartForm');
+    if (!form) {
+        console.error('Add to cart form not found');
+        return;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        if (!submitButton) {
+            console.error('Submit button not found');
+            return;
         }
-    })
-    .then(response => {
-        if (response.ok) {
-            submitButton.innerHTML = '<i class="fas fa-check me-2"></i>Добавлено!';
-            submitButton.className = submitButton.className.replace('btn-info', 'btn-success');
+
+        const originalText = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Добавляем...';
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                submitButton.innerHTML = '<i class="fas fa-check me-2"></i>Добавлено!';
+                submitButton.className = submitButton.className.replace('btn-info', 'btn-success');
+                
+                showNotification('Товар успешно добавлен в корзину!', 'success');
+                
+                // Обновляем счетчик корзины
+                updateCartCounter();
+                
+                setTimeout(() => {
+                    submitButton.innerHTML = originalText;
+                    submitButton.className = submitButton.className.replace('btn-success', 'btn-info');
+                    submitButton.disabled = false;
+                }, 2000);
+            } else {
+                throw new Error('Ошибка при добавлении товара');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitButton.innerHTML = '<i class="fas fa-times me-2"></i>Ошибка';
+            submitButton.className = submitButton.className.replace('btn-info', 'btn-danger');
             
-            showNotification('Товар успешно добавлен в корзину!', 'success');
-            
-            // Обновляем счетчик корзины
-            updateCartCounter();
+            showNotification('Ошибка при добавлении товара', 'error');
             
             setTimeout(() => {
                 submitButton.innerHTML = originalText;
-                submitButton.className = submitButton.className.replace('btn-success', 'btn-info');
+                submitButton.className = submitButton.className.replace('btn-danger', 'btn-info');
                 submitButton.disabled = false;
             }, 2000);
-        } else {
-            throw new Error('Ошибка при добавлении товара');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        submitButton.innerHTML = '<i class="fas fa-times me-2"></i>Ошибка';
-        submitButton.className = submitButton.className.replace('btn-info', 'btn-danger');
-        
-        showNotification('Ошибка при добавлении товара', 'error');
-        
-        setTimeout(() => {
-            submitButton.innerHTML = originalText;
-            submitButton.className = submitButton.className.replace('btn-danger', 'btn-info');
-            submitButton.disabled = false;
-        }, 2000);
+        });
     });
-});
+}
 
 // Обновление счетчика корзины
 function updateCartCounter() {
@@ -413,7 +479,7 @@ function updateCartCounter() {
         const cartCounter = document.querySelector('.cart-count');
         if (cartCounter) {
             cartCounter.textContent = data.count;
-            cartCounter.style.display = data.count > 0 ? 'inline' : 'none';
+            cartCounter.style.display = data.count > 0 ? 'flex' : 'none';
         }
     })
     .catch(error => console.error('Error updating cart counter:', error));
@@ -421,11 +487,68 @@ function updateCartCounter() {
 
 // Обработчики событий
 document.addEventListener('DOMContentLoaded', function() {
-    // Обновляем цену при изменении количества
-    document.getElementById('quantity')?.addEventListener('input', updateTotalPrice);
-    
-    // Инициализируем цену
+    const quantityInput = document.getElementById('quantity');
+    const decreaseBtn = document.getElementById('decreaseBtn');
+    const increaseBtn = document.getElementById('increaseBtn');
+
+    if (!quantityInput || !decreaseBtn || !increaseBtn) {
+        console.error('Required elements not found on page load');
+        return;
+    }
+
+    // Инициализация
     updateTotalPrice();
+    updateButtonStates();
+    setupFormListener();
+
+    // Обработчики для кнопок
+    decreaseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        changeQuantity(-1);
+    });
+
+    increaseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        changeQuantity(1);
+    });
+
+    // Обработчик ввода в поле
+    quantityInput.addEventListener('input', () => {
+        updateTotalPrice();
+        updateButtonStates();
+    });
+
+    // Валидация при потере фокуса
+    quantityInput.addEventListener('blur', () => {
+        let value = parseInt(quantityInput.value) || 1;
+        quantityInput.value = Math.max(1, Math.min(value, maxQuantity));
+        updateTotalPrice();
+        updateButtonStates();
+    });
+
+    // Обработчик клавиш стрелок
+    quantityInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            changeQuantity(1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            changeQuantity(-1);
+        }
+    });
+});
+
+// Обработка клавиш для быстрого изменения количества
+document.addEventListener('keydown', (e) => {
+    if (document.activeElement.tagName !== 'INPUT') {
+        if (e.key === '+' || e.key === '=') {
+            e.preventDefault();
+            changeQuantity(1);
+        } else if (e.key === '-') {
+            e.preventDefault();
+            changeQuantity(-1);
+        }
+    }
 });
 </script>
 {% endblock %}

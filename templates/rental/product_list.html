@@ -29,31 +29,30 @@
         top: var(--header-height);
         left: 0;
         z-index: 999;
-        transform: translateX(-100%);
         transition: transform 0.3s ease;
     }
 
-    .catalog-sidebar.show {
-        transform: translateX(0);
+    .catalog-sidebar.hidden {
+        transform: translateX(-100%);
     }
 
     /* Main content with sidebar */
     .main-catalog-content {
-        margin-left: 0;
+        margin-left: var(--sidebar-width);
         padding: 2rem;
         width: 100%;
         transition: margin-left 0.3s ease;
     }
 
-    .main-catalog-content.sidebar-open {
-        margin-left: var(--sidebar-width);
+    .main-catalog-content.sidebar-closed {
+        margin-left: 0;
     }
 
     /* Toggle Button */
     .sidebar-toggle-btn {
         position: fixed;
         top: 50%;
-        left: 0;
+        left: var(--sidebar-width);
         transform: translateY(-50%);
         background: var(--accent-color);
         border: none;
@@ -70,8 +69,8 @@
         cursor: pointer;
     }
 
-    .sidebar-toggle-btn.open {
-        left: var(--sidebar-width);
+    .sidebar-toggle-btn.closed {
+        left: 0;
     }
 
     .sidebar-toggle-btn:hover {
@@ -83,7 +82,7 @@
         transition: transform 0.3s ease;
     }
 
-    .sidebar-toggle-btn.open i {
+    .sidebar-toggle-btn.closed i {
         transform: rotate(180deg);
     }
 
@@ -546,19 +545,21 @@
 
         .catalog-sidebar {
             z-index: 1001;
+            transform: translateX(-100%);
+        }
+
+        .catalog-sidebar.mobile-open {
+            transform: translateX(0);
         }
 
         .sidebar-toggle-btn {
             z-index: 1002;
+            left: 0;
         }
 
         .main-catalog-content {
             margin-left: 0;
             padding: 1rem;
-        }
-
-        .main-catalog-content.sidebar-open {
-            margin-left: 0;
         }
 
         .search-form {
@@ -601,11 +602,11 @@
 <div class="catalog-layout">
     <!-- Toggle Button -->
     <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">
-        <i class="fas fa-chevron-right"></i>
+        <i class="fas fa-chevron-left"></i>
     </button>
 
     <!-- Overlay for mobile -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebarMobile()"></div>
 
     <!-- Catalog Sidebar -->
     <nav class="catalog-sidebar" id="catalogSidebar">
@@ -620,7 +621,6 @@
             </div>
         </div>
 
-
         <!-- Tag Tree -->
         <div class="tag-tree">
             <a href="{% url 'rental:product_list' %}" 
@@ -633,15 +633,16 @@
             {% if root_tags %}
                 {% for tag in root_tags %}
                     <div class="tag-group">
-                        <a href="#" class="tag-item has-children" 
-                           data-tag-id="{{ tag.id }}" 
-                           data-has-children="true"
-                           onclick="toggleTagChildren({{ tag.id }}, event)">
-                            <i class="fas fa-folder me-2"></i>
-                            {{ tag.get_display_name }}
-                        </a>
-                        
                         {% if tag.get_children %}
+                            <!-- Parent tag with children -->
+                            <a href="#" class="tag-item has-children" 
+                               data-tag-id="{{ tag.id }}" 
+                               data-has-children="true"
+                               onclick="toggleTagChildren({{ tag.id }}, event)">
+                                <i class="fas fa-folder me-2"></i>
+                                {{ tag.get_display_name }}
+                            </a>
+                            
                             <div class="tag-children" id="children-{{ tag.id }}">
                                 {% for child in tag.get_children %}
                                     <a href="?tag={{ child.id }}" 
@@ -651,6 +652,13 @@
                                     </a>
                                 {% endfor %}
                             </div>
+                        {% else %}
+                            <!-- Tag without children (direct filter) -->
+                            <a href="?tag={{ tag.id }}" 
+                               class="tag-item {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}">
+                                <i class="fas fa-tag me-2"></i>
+                                {{ tag.get_display_name }}
+                            </a>
                         {% endif %}
                     </div>
                 {% endfor %}
@@ -811,7 +819,26 @@
 
 <script>
 // Global variables
-let sidebarOpen = false;
+let sidebarOpen = true; // По умолчанию открыта
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // На десктопе оставляем боковую панель открытой по умолчанию
+    if (window.innerWidth > 768) {
+        sidebarOpen = true;
+        // Ничего не делаем, sidebar уже открыта по CSS
+    } else {
+        // На мобильных закрыта по умолчанию
+        sidebarOpen = false;
+        document.getElementById('catalogSidebar').classList.add('hidden');
+        document.getElementById('mainContent').classList.add('sidebar-closed');
+        document.getElementById('sidebarToggle').classList.add('closed');
+        document.getElementById('sidebarToggle').querySelector('i').className = 'fas fa-chevron-right';
+    }
+    
+    // AJAX forms
+    setupAjaxForms();
+});
 
 // Toggle sidebar
 function toggleSidebar() {
@@ -822,24 +849,41 @@ function toggleSidebar() {
     
     sidebarOpen = !sidebarOpen;
     
-    if (sidebarOpen) {
-        sidebar.classList.add('show');
-        mainContent.classList.add('sidebar-open');
-        toggleBtn.classList.add('open');
-        
-        // Add overlay on mobile
-        if (window.innerWidth <= 768) {
-            overlay.classList.add('active');
+    if (window.innerWidth > 768) {
+        // Desktop behavior
+        if (sidebarOpen) {
+            sidebar.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-closed');
+            toggleBtn.classList.remove('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-left';
+        } else {
+            sidebar.classList.add('hidden');
+            mainContent.classList.add('sidebar-closed');
+            toggleBtn.classList.add('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         }
     } else {
-        sidebar.classList.remove('show');
-        mainContent.classList.remove('sidebar-open');
-        toggleBtn.classList.remove('open');
-        overlay.classList.remove('active');
+        // Mobile behavior
+        if (sidebarOpen) {
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
     }
 }
 
-// Toggle tag children
+// Close sidebar on mobile
+function closeSidebarMobile() {
+    if (window.innerWidth <= 768) {
+        sidebarOpen = false;
+        document.getElementById('catalogSidebar').classList.remove('mobile-open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+    }
+}
+
+// Toggle tag children with improved logic
 function toggleTagChildren(tagId, event) {
     event.preventDefault();
     event.stopPropagation();
@@ -852,49 +896,66 @@ function toggleTagChildren(tagId, event) {
     const isExpanded = tagItem.classList.contains('expanded');
     
     if (isExpanded) {
-        // If already expanded, navigate to the tag filter
-        window.location.href = `?tag=${tagId}`;
+        // Закрываем список
+        tagItem.classList.remove('expanded');
+        childrenContainer.classList.remove('expanded');
     } else {
-        // Collapse all other expanded items first
+        // Сначала закрываем все другие открытые списки
         document.querySelectorAll('.tag-item.has-children.expanded').forEach(item => {
-            item.classList.remove('expanded');
+            if (item !== tagItem) {
+                item.classList.remove('expanded');
+            }
         });
         document.querySelectorAll('.tag-children.expanded').forEach(container => {
-            container.classList.remove('expanded');
+            if (container !== childrenContainer) {
+                container.classList.remove('expanded');
+            }
         });
         
-        // Expand this item
+        // Открываем этот список
         tagItem.classList.add('expanded');
         childrenContainer.classList.add('expanded');
     }
 }
 
-// Sidebar search functionality
-document.getElementById('sidebarSearchInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const query = e.target.value.trim();
-        if (query.length > 0) {
-            window.location.href = `{% url 'rental:product_list' %}?search=${encodeURIComponent(query)}`;
+// Handle window resize
+window.addEventListener('resize', function() {
+    const overlay = document.getElementById('sidebarOverlay');
+    const sidebar = document.getElementById('catalogSidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    
+    if (window.innerWidth > 768) {
+        // Desktop: remove mobile classes, restore desktop state
+        overlay.classList.remove('active');
+        sidebar.classList.remove('mobile-open');
+        
+        // Restore desktop sidebar state
+        if (sidebarOpen) {
+            sidebar.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-closed');
+            toggleBtn.classList.remove('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-left';
+        } else {
+            sidebar.classList.add('hidden');
+            mainContent.classList.add('sidebar-closed');
+            toggleBtn.classList.add('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        }
+    } else {
+        // Mobile: ensure proper mobile state
+        if (sidebarOpen) {
+            overlay.classList.add('active');
+            sidebar.classList.add('mobile-open');
+        } else {
+            overlay.classList.remove('active');
+            sidebar.classList.remove('mobile-open');
         }
     }
 });
 
-// Handle window resize
-window.addEventListener('resize', function() {
-    const overlay = document.getElementById('sidebarOverlay');
-    
-    if (window.innerWidth > 768) {
-        // Remove overlay on desktop
-        overlay.classList.remove('active');
-    } else if (sidebarOpen) {
-        // Add overlay on mobile if sidebar is open
-        overlay.classList.add('active');
-    }
-});
-
-// AJAX form submissions for add to cart
-document.addEventListener('DOMContentLoaded', function() {
+// Setup AJAX forms
+function setupAjaxForms() {
     document.querySelectorAll('.add-to-cart-form').forEach(function(form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -958,12 +1019,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
-    // Auto-open sidebar on desktop
-    if (window.innerWidth > 768) {
-        toggleSidebar();
-    }
-});
+}
 
 // Update cart counter
 function updateCartCounter() {
@@ -1024,4 +1080,3 @@ style.textContent = `
 document.head.appendChild(style);
 </script>
 {% endblock %}
-                
