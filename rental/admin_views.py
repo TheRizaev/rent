@@ -434,6 +434,7 @@ def tag_management(request):
         if 'add_tag' in request.POST:
             name = request.POST.get('name')
             parent_id = request.POST.get('parent')
+            order = request.POST.get('order', 0)
             
             if name:
                 parent = None
@@ -443,7 +444,12 @@ def tag_management(request):
                     except Tag.DoesNotExist:
                         pass
                 
-                Tag.objects.create(name=name, parent=parent)
+                try:
+                    order = int(order)
+                except (ValueError, TypeError):
+                    order = 0
+                
+                Tag.objects.create(name=name, parent=parent, order=order)
                 messages.success(request, f'Тег "{name}" успешно добавлен')
                 return redirect('tag_management')
         
@@ -451,10 +457,16 @@ def tag_management(request):
             tag_id = request.POST.get('tag_id')
             name = request.POST.get('name')
             parent_id = request.POST.get('parent')
+            order = request.POST.get('order', 0)
             
             try:
                 tag = Tag.objects.get(id=tag_id)
                 tag.name = name
+                
+                try:
+                    tag.order = int(order)
+                except (ValueError, TypeError):
+                    tag.order = 0
                 
                 # Проверяем, что родительский тег не является потомком текущего тега
                 if parent_id:
@@ -497,17 +509,30 @@ def tag_management(request):
                 messages.error(request, 'Тег не найден')
             
             return redirect('tag_management')
+        
+        elif 'update_tag_order' in request.POST:
+            # Обновление порядка тегов
+            tag_orders = request.POST.getlist('tag_order')
+            for i, tag_id in enumerate(tag_orders):
+                try:
+                    tag = Tag.objects.get(id=tag_id)
+                    tag.order = i
+                    tag.save()
+                except Tag.DoesNotExist:
+                    pass
+            messages.success(request, 'Порядок тегов обновлен')
+            return redirect('tag_management')
     
-    # Получаем все теги и сортируем их вручную
-    all_tags = Tag.objects.all()
+    # Получаем все теги с правильной сортировкой
+    all_tags = Tag.objects.all().order_by('order', 'name')
     
     # Группируем теги по уровням для отображения
-    root_tags = all_tags.filter(parent=None).order_by('name')
+    root_tags = all_tags.filter(parent=None)
     tag_tree = []
     
     def build_tree(parent_tags, level=0):
         tree = []
-        for tag in parent_tags.order_by('name'):
+        for tag in parent_tags:
             tree.append({
                 'tag': tag,
                 'level': level,
@@ -521,10 +546,24 @@ def tag_management(request):
     
     tag_tree = build_tree(root_tags)
     
+    # Получаем фильтры сортировки
+    sort_filter = request.GET.get('sort', 'order')  # order, alphabetical, creation_date
+    
+    if sort_filter == 'alphabetical':
+        root_tags = Tag.objects.filter(parent=None).order_by('name')
+        tag_tree = build_tree(root_tags)
+    elif sort_filter == 'creation_date':
+        root_tags = Tag.objects.filter(parent=None).order_by('id')
+        tag_tree = build_tree(root_tags)
+    else:  # order
+        root_tags = Tag.objects.filter(parent=None).order_by('order', 'name')
+        tag_tree = build_tree(root_tags)
+    
     context = {
-        'tags': all_tags.order_by('name'),
+        'tags': all_tags,
         'tag_tree': tag_tree,
         'root_tags': root_tags,
+        'sort_filter': sort_filter,
     }
     return render(request, 'rental/admin/tag_management.html', context)
 
@@ -536,7 +575,7 @@ def get_tag_children(request):
     if parent_id:
         try:
             parent = Tag.objects.get(id=parent_id)
-            children = parent.tag_set.all().order_by('name').values('id', 'name')
+            children = parent.tag_set.all().order_by('order', 'name').values('id', 'name')
             return JsonResponse({
                 'success': True,
                 'children': list(children)
@@ -545,7 +584,7 @@ def get_tag_children(request):
             return JsonResponse({'success': False, 'error': 'Родительский тег не найден'})
     else:
         # Возвращаем корневые теги
-        root_tags = Tag.objects.filter(parent=None).order_by('name').values('id', 'name')
+        root_tags = Tag.objects.filter(parent=None).order_by('order', 'name').values('id', 'name')
         return JsonResponse({
             'success': True,
             'children': list(root_tags)
@@ -555,15 +594,16 @@ def get_tag_children(request):
 def tag_structure_api(request):
     """API для получения структуры тегов в JSON формате"""
     def build_json_tree(parent=None):
-        tags = Tag.objects.filter(parent=parent).order_by('name')
+        tags = Tag.objects.filter(parent=parent).order_by('order', 'name')
         tree = []
         for tag in tags:
             children = build_json_tree(tag)
             tree.append({
                 'id': tag.id,
-                'name': tag.name,
+                'name': tag.get_display_name(),
                 'products_count': tag.product_set.count(),
-                'children': children
+                'children': children,
+                'order': tag.order
             })
         return tree
     

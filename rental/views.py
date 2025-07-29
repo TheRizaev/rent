@@ -26,7 +26,17 @@ def preview_page(request):
 
 def product_list(request):
     products = Product.objects.filter(available_quantity__gt=0)
-    root_tags = Tag.objects.filter(parent=None).order_by('name')
+    
+    # Получаем параметр сортировки из admin панели или используем порядок по умолчанию
+    # Используем тот же принцип сортировки, что и в админке
+    sort_preference = request.session.get('tag_sort_preference', 'order')
+    
+    if sort_preference == 'alphabetical':
+        root_tags = Tag.objects.filter(parent=None).order_by('name')
+    elif sort_preference == 'creation_date':
+        root_tags = Tag.objects.filter(parent=None).order_by('id')
+    else:  # order
+        root_tags = Tag.objects.filter(parent=None).order_by('order', 'name')
     
     search_query = request.GET.get('search', '')
     tag_filter = request.GET.get('tag', '')
@@ -49,8 +59,13 @@ def product_list(request):
             all_tags = [selected_tag] + descendant_tags
             products = products.filter(tags__in=all_tags).distinct()
             
-            # Получаем дочерние теги для отображения
-            selected_tag_children = selected_tag.get_children()
+            # Получаем дочерние теги для отображения с правильной сортировкой
+            if sort_preference == 'alphabetical':
+                selected_tag_children = selected_tag.get_children().order_by('name')
+            elif sort_preference == 'creation_date':
+                selected_tag_children = selected_tag.get_children().order_by('id')
+            else:  # order
+                selected_tag_children = selected_tag.get_children().order_by('order', 'name')
         except Tag.DoesNotExist:
             pass
     

@@ -36,6 +36,7 @@ class Shelf(models.Model):
 class Tag(models.Model):
     name = models.CharField(max_length=100, verbose_name='Название тега')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, verbose_name='Родительский тег')
+    order = models.PositiveIntegerField(default=0, verbose_name='Порядок сортировки')
     
     def __str__(self):
         if self.parent:
@@ -47,7 +48,7 @@ class Tag(models.Model):
         super().save(*args, **kwargs)
 
     def get_display_name(self):
-            return self.name.capitalize()
+        return self.name.capitalize()
 
     def get_full_path(self):
         path = []
@@ -68,7 +69,7 @@ class Tag(models.Model):
     
     def get_children(self):
         """Возвращает прямых потомков"""
-        return Tag.objects.filter(parent=self)
+        return Tag.objects.filter(parent=self).order_by('order', 'name')
     
     def get_descendants(self):
         """Возвращает всех потомков (включая потомков потомков)"""
@@ -109,7 +110,7 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
-        ordering = ['name']
+        ordering = ['order', 'name']
 
 class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
