@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 import random
 import string
+import markdown
 
 class Storage(models.Model):
     name = models.CharField(max_length=10, verbose_name='Название стойки')
@@ -166,6 +167,25 @@ class Product(models.Model):
             return self.description.capitalize()
         return ''
     
+    def get_description_html(self):
+        """Возвращает описание, конвертированное из Markdown в HTML"""
+        if self.description:
+            # Сначала делаем заглавную букву, потом конвертируем в HTML
+            description_text = self.get_display_description()
+            return markdown.markdown(description_text, extensions=['nl2br'])
+        return ''
+    
+    def get_availability_status(self):
+        """Возвращает статус доступности товара с учетом общего количества"""
+        if self.available_quantity <= 0:
+            return 'out'  # Нет в наличии
+        elif self.quantity > 50 and self.available_quantity <= 10:
+            return 'low'  # Мало (для товаров с большим общим количеством)
+        elif self.available_quantity <= 3 and self.quantity <= 50:
+            return 'low'  # Мало (для товаров с небольшим общим количеством)
+        else:
+            return 'available'  # В наличии
+    
     def __str__(self):
         return self.get_display_name()
     
@@ -174,7 +194,6 @@ class Product(models.Model):
         verbose_name_plural = 'Товары'
 
 class Order(models.Model):
-    # ИСПРАВЛЕНО: Убрали статус 'in_rent'
     STATUS_CHOICES = [
         ('pending', 'Ожидает подтверждения'),
         ('confirmed', 'Подтверждена'),
@@ -190,6 +209,12 @@ class Order(models.Model):
     contact_person = models.CharField(max_length=200, verbose_name='Контактное лицо')
     phone1 = models.CharField(max_length=20, verbose_name='Телефон 1')
     phone2 = models.CharField(max_length=20, blank=True, verbose_name='Телефон 2')
+    
+    # НОВЫЕ ПОЛЯ
+    production_name = models.CharField(max_length=200, blank=True, verbose_name='Название продакшена')
+    project_name = models.CharField(max_length=200, blank=True, verbose_name='Название проекта')
+    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Сумма залога')
+    
     comment = models.TextField(blank=True, verbose_name='Комментарий')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid', verbose_name='Оплата')
@@ -217,6 +242,10 @@ class Order(models.Model):
         self.contact_person = ' '.join(word.capitalize() for word in self.contact_person.strip().split())
         if self.comment:
             self.comment = self.comment.strip().lower()
+        if self.production_name:
+            self.production_name = self.production_name.strip()
+        if self.project_name:
+            self.project_name = self.project_name.strip()
         super().save(*args, **kwargs)
     
     def get_display_comment(self):

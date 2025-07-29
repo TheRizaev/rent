@@ -25,10 +25,8 @@ def preview_page(request):
     return render(request, 'rental/preview.html')
 
 def product_list(request):
-    products = Product.objects.filter(available_quantity__gt=0)
+    products = Product.objects.all()
     
-    # Получаем параметр сортировки из admin панели или используем порядок по умолчанию
-    # Используем тот же принцип сортировки, что и в админке
     sort_preference = request.session.get('tag_sort_preference', 'order')
     
     if sort_preference == 'alphabetical':
@@ -234,7 +232,8 @@ def checkout(request):
         return redirect('rental:cart')
     
     if request.method == 'POST':
-        form = OrderForm(request.POST)
+        # Передаем пользователя в форму для определения доступности поля deposit_amount
+        form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
             order = form.save(commit=False)
             
@@ -301,7 +300,8 @@ def checkout(request):
             messages.success(request, 'Заявка успешно создана!')
             return redirect('rental:order_success', order_id=order.id)
     else:
-        form = OrderForm()
+        # Передаем пользователя в форму и при GET запросе
+        form = OrderForm(user=request.user)
     
     # ИСПРАВЛЕНО: Подготавливаем данные корзины для отображения с правильным расчетом
     cart_items = []

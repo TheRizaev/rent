@@ -35,6 +35,23 @@
                                 <div class="text-danger">{{ form.phone2.errors }}</div>
                             {% endif %}
                         </div>
+                        
+                        <!-- НОВЫЕ ПОЛЯ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ -->
+                        <div class="col-md-6">
+                            <label for="{{ form.production_name.id_for_label }}" class="form-label">Название продакшена</label>
+                            {{ form.production_name }}
+                            {% if form.production_name.errors %}
+                                <div class="text-danger">{{ form.production_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.project_name.id_for_label }}" class="form-label">Название проекта</label>
+                            {{ form.project_name }}
+                            {% if form.project_name.errors %}
+                                <div class="text-danger">{{ form.project_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
                         <div class="col-md-6">
                             <label for="{{ form.rental_start.id_for_label }}" class="form-label">Дата начала аренды</label>
                             {{ form.rental_start }}
@@ -156,12 +173,38 @@
     border-color: #3498db;
     box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
 }
+
+/* Улучшенные стили для новых полей */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Выделение обязательных полей */
+.form-label::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Убираем звездочки для необязательных полей */
+label[for="{{ form.phone2.id_for_label }}"]::after,
+label[for="{{ form.production_name.id_for_label }}"]::after,
+label[for="{{ form.project_name.id_for_label }}"]::after,
+label[for="{{ form.comment.id_for_label }}"]::after {
+    content: "";
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Глобальные переменные для хранения данных о товарах
+// Безопасная инициализация переменных
 let cartItems = [];
 let dailyTotal = 0;
 
@@ -230,6 +273,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
         calculateRentalDays();
     }
+
+    // Добавляем подсказки для новых полей
+    setupFieldTooltips();
 });
 
 function calculateRentalDays() {
@@ -313,7 +359,84 @@ function formatDate(dateString) {
     return date.toLocaleDateString('ru-RU', options);
 }
 
-// Подсказки при наведении
+// Настройка подсказок для полей
+function setupFieldTooltips() {
+    const fields = [
+        {
+            id: '{{ form.production_name.id_for_label }}',
+            tooltip: 'Укажите название вашей продакшн-компании или студии'
+        },
+        {
+            id: '{{ form.project_name.id_for_label }}',
+            tooltip: 'Название проекта, для которого арендуется оборудование'
+        },
+        {
+            id: '{{ form.contact_person.id_for_label }}',
+            tooltip: 'ФИО ответственного лица'
+        },
+        {
+            id: '{{ form.phone1.id_for_label }}',
+            tooltip: 'Основной номер телефона для связи'
+        },
+        {
+            id: '{{ form.phone2.id_for_label }}',
+            tooltip: 'Дополнительный номер телефона (необязательно)'
+        }
+    ];
+
+    fields.forEach(field => {
+        const element = document.getElementById(field.id);
+        if (element) {
+            element.setAttribute('title', field.tooltip);
+            element.addEventListener('focus', function() {
+                showTooltip(this, field.tooltip);
+            });
+        }
+    });
+}
+
+// Показать подсказку
+function showTooltip(element, text) {
+    // Удаляем существующие подсказки
+    const existingTooltip = document.querySelector('.field-tooltip');
+    if (existingTooltip) {
+        existingTooltip.remove();
+    }
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'field-tooltip position-absolute bg-dark text-white p-2 rounded';
+    tooltip.style.cssText = `
+        font-size: 0.8rem;
+        z-index: 1000;
+        max-width: 300px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    `;
+    tooltip.textContent = text;
+
+    document.body.appendChild(tooltip);
+
+    // Позиционируем подсказку
+    const rect = element.getBoundingClientRect();
+    tooltip.style.left = rect.left + 'px';
+    tooltip.style.top = (rect.bottom + 5) + 'px';
+
+    // Показываем с анимацией
+    setTimeout(() => {
+        tooltip.style.opacity = '1';
+    }, 10);
+
+    // Удаляем при потере фокуса
+    element.addEventListener('blur', () => {
+        if (tooltip.parentNode) {
+            tooltip.style.opacity = '0';
+            setTimeout(() => tooltip.remove(), 300);
+        }
+    }, { once: true });
+}
+
+// Подсказки при наведении на даты
 document.addEventListener('DOMContentLoaded', function() {
     const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
     const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
@@ -325,6 +448,81 @@ document.addEventListener('DOMContentLoaded', function() {
     if (endDateInput) {
         endDateInput.setAttribute('title', 'Выберите дату окончания аренды');
     }
+});
+
+// Валидация формы перед отправкой
+document.querySelector('form').addEventListener('submit', function(e) {
+    const requiredFields = [
+        '{{ form.contact_person.id_for_label }}',
+        '{{ form.phone1.id_for_label }}',
+        '{{ form.rental_start.id_for_label }}',
+        '{{ form.rental_end.id_for_label }}'
+    ];
+
+    let hasErrors = false;
+    const errors = [];
+
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && !field.value.trim()) {
+            hasErrors = true;
+            const label = document.querySelector(`label[for="${fieldId}"]`);
+            const fieldName = label ? label.textContent.replace(' *', '') : 'Поле';
+            errors.push(`${fieldName} обязательно для заполнения`);
+            field.classList.add('is-invalid');
+        } else if (field) {
+            field.classList.remove('is-invalid');
+        }
+    });
+
+    if (hasErrors) {
+        e.preventDefault();
+        alert('Пожалуйста, заполните все обязательные поля:\n\n' + errors.join('\n'));
+        
+        // Фокусируемся на первом невалидном поле
+        const firstInvalid = document.querySelector('.is-invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+});
+
+// Автоматическое форматирование телефонных номеров
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInputs = [
+        document.getElementById('{{ form.phone1.id_for_label }}'),
+        document.getElementById('{{ form.phone2.id_for_label }}')
+    ];
+
+    phoneInputs.forEach(input => {
+        if (input) {
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.startsWith('998')) {
+                    // Формат: +998 (99) 123-45-67
+                    if (value.length >= 3) {
+                        value = '+998 ' + value.substring(3);
+                    }
+                    if (value.length >= 7) {
+                        value = value.substring(0, 5) + '(' + value.substring(5, 7) + ') ' + value.substring(7);
+                    }
+                    if (value.length >= 14) {
+                        value = value.substring(0, 14) + '-' + value.substring(14, 16) + '-' + value.substring(16, 18);
+                    }
+                } else if (value.length > 0 && !value.startsWith('998')) {
+                    // Добавляем +998 автоматически
+                    value = '998' + value;
+                    e.target.value = value;
+                    e.target.dispatchEvent(new Event('input'));
+                    return;
+                }
+                
+                e.target.value = value;
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

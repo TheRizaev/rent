@@ -5,15 +5,28 @@ from django.utils import timezone
 class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
-        fields = ['contact_person', 'phone1', 'phone2', 'rental_start', 'rental_end', 'comment']
+        fields = ['contact_person', 'phone1', 'phone2', 'production_name', 'project_name', 'deposit_amount', 'rental_start', 'rental_end', 'comment']
         widgets = {
             'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите ФИО'}),
             'phone1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67'}),
             'phone2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67 (необязательно)'}),
+            'production_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название продакшена'}),
+            'project_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название проекта'}),
+            'deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'rental_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'rental_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Дополнительная информация (необязательно)'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Сумма залога доступна только администраторам
+        if not user or not user.is_staff:
+            self.fields.pop('deposit_amount', None)
+        else:
+            self.fields['deposit_amount'].help_text = 'Доступно только администраторам'
     
     def clean(self):
         cleaned_data = super().clean()
@@ -39,11 +52,20 @@ class ProductForm(forms.ModelForm):
                 'placeholder': 'Оставьте пустым для автоматической генерации',
                 'maxlength': '13'
             }),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 6,
+                'placeholder': 'Описание товара в формате Markdown...\n\n**Жирный текст**\n*Курсив*\n- Список\n- Элементов\n\n[Ссылка](http://example.com)'
+            }),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'daily_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'tags': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
             'shelf': forms.Select(attrs={'class': 'form-control'}),
+            'photo': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'id': 'photoInput'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -54,6 +76,9 @@ class ProductForm(forms.ModelForm):
         
         # Добавляем help_text для поля штрих-кода
         self.fields['barcode'].help_text = 'Штрих-код будет использован как артикул. При пустом поле генерируется автоматически.'
+        
+        # Обновляем help_text для описания
+        self.fields['description'].help_text = 'Поддерживается Markdown форматирование: **жирный**, *курсив*, списки, ссылки и т.д.'
         
         if self.instance and self.instance.pk:
             self.initial['name'] = self.instance.get_display_name()
@@ -144,4 +169,3 @@ class ShelfForm(forms.ModelForm):
             cleaned_data['number'] = number
         
         return cleaned_data
-    

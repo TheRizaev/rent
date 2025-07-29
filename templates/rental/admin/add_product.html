@@ -35,18 +35,74 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
-                        {{ form.photo }}
+                        <div class="photo-upload-container">
+                            <!-- Кастомная область для загрузки -->
+                            <div class="photo-drop-area border rounded p-4 text-center" id="photoDropArea">
+                                <div class="drop-content">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <h5>Перетащите изображение сюда</h5>
+                                    <p class="text-muted">или нажмите для выбора файла<br>
+                                    Также можете вставить из буфера обмена (Ctrl+V)</p>
+                                    <div class="preview-container mt-3" id="previewContainer" style="display: none;">
+                                        <img id="imagePreview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearImage()">
+                                                <i class="fas fa-times"></i> Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{ form.photo }}
+                        </div>
                         {% if form.photo.errors %}
                             <div class="text-danger">{{ form.photo.errors }}</div>
                         {% endif %}
                     </div>
                     
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">Описание</label>
-                        {{ form.description }}
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            Описание 
+                            <small class="text-muted">(поддерживается Markdown)</small>
+                        </label>
+                        <div class="description-container">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted fw-bold">Редактирование:</small>
+                                        <div class="markdown-toolbar mb-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMarkdown('**', '**')" title="Жирный">
+                                                <i class="fas fa-bold"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMarkdown('*', '*')" title="Курсив">
+                                                <i class="fas fa-italic"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMarkdown('- ', '')" title="Список">
+                                                <i class="fas fa-list"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertMarkdown('[', '](http://)')" title="Ссылка">
+                                                <i class="fas fa-link"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{ form.description }}
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted fw-bold">Предварительный просмотр:</small>
+                                    </div>
+                                    <div class="markdown-preview border rounded p-3" id="markdownPreview" style="min-height: 150px; background-color: #f8f9fa;">
+                                        <p class="text-muted">Предварительный просмотр появится здесь...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         {% if form.description.errors %}
                             <div class="text-danger">{{ form.description.errors }}</div>
                         {% endif %}
+                        <small class="form-text text-muted">
+                            Поддерживаемый синтаксис: **жирный**, *курсив*, - список, [ссылка](URL)
+                        </small>
                     </div>
                 </div>
                 
@@ -186,6 +242,60 @@
     color: #6c757d;
     font-size: 0.875rem;
 }
+
+/* Стили для загрузки фото */
+.photo-drop-area {
+    border: 2px dashed #dee2e6 !important;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-drop-area:hover {
+    border-color: #3498db !important;
+    background-color: #e3f2fd;
+}
+
+.photo-drop-area.dragover {
+    border-color: #3498db !important;
+    background-color: #e3f2fd;
+    transform: scale(1.02);
+}
+
+.photo-upload-container input[type="file"] {
+    display: none;
+}
+
+/* Стили для редактора Markdown */
+.markdown-toolbar {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.markdown-preview {
+    background-color: #f8f9fa;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.markdown-preview h1, .markdown-preview h2, .markdown-preview h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.markdown-preview p {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-preview ul, .markdown-preview ol {
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+}
 </style>
 
 <script>
@@ -245,8 +355,192 @@ function removeTag(checkboxId) {
     }
 }
 
+// Функции для работы с фото
+function setupPhotoUpload() {
+    const dropArea = document.getElementById('photoDropArea');
+    const fileInput = document.getElementById('photoInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+
+    // Клик по области загрузки
+    dropArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Drag & Drop
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+    });
+
+    dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('dragover');
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            handleImageFile(files[0]);
+        }
+    });
+
+    // Выбор файла
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleImageFile(e.target.files[0]);
+        }
+    });
+
+    // Вставка из буфера обмена
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                handleImageFile(file);
+                break;
+            }
+        }
+    });
+}
+
+function handleImageFile(file) {
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const fileInput = document.getElementById('photoInput');
+    
+    // Создаем DataTransfer для установки файла в input
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    fileInput.files = dataTransfer.files;
+
+    // Показываем предварительный просмотр
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        imagePreview.src = e.target.result;
+        previewContainer.style.display = 'block';
+        
+        // Скрываем текст загрузки
+        const dropContent = document.querySelector('.drop-content > *:not(#previewContainer)');
+        document.querySelector('.drop-content h5').style.display = 'none';
+        document.querySelector('.drop-content p').style.display = 'none';
+        document.querySelector('.drop-content i').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImage() {
+    const fileInput = document.getElementById('photoInput');
+    const previewContainer = document.getElementById('previewContainer');
+    
+    fileInput.value = '';
+    previewContainer.style.display = 'none';
+    
+    // Показываем текст загрузки обратно
+    document.querySelector('.drop-content h5').style.display = 'block';
+    document.querySelector('.drop-content p').style.display = 'block';
+    document.querySelector('.drop-content i').style.display = 'block';
+}
+
+// Функции для работы с Markdown
+function setupMarkdownEditor() {
+    const textarea = document.querySelector('#id_description');
+    const preview = document.getElementById('markdownPreview');
+
+    if (!textarea) return;
+
+    // Обновление предварительного просмотра
+    function updatePreview() {
+        const text = textarea.value;
+        if (!text.trim()) {
+            preview.innerHTML = '<p class="text-muted">Предварительный просмотр появится здесь...</p>';
+            return;
+        }
+        
+        // Простая конвертация Markdown в HTML (базовые элементы)
+        let html = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^- (.+)$/gm, '<li>$1</li>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+        
+        // Оборачиваем в параграфы
+        if (!html.includes('<p>')) {
+            html = '<p>' + html + '</p>';
+        }
+        
+        // Обрабатываем списки
+        html = html.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
+        
+        preview.innerHTML = html;
+    }
+
+    textarea.addEventListener('input', updatePreview);
+    
+    // Инициализация
+    updatePreview();
+}
+
+function insertMarkdown(before, after) {
+    const textarea = document.querySelector('#id_description');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    
+    const newText = before + selectedText + after;
+    
+    textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
+    
+    // Устанавливаем курсор
+    const newCursorPos = start + before.length + selectedText.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+    
+    // Обновляем предварительный просмотр
+    textarea.dispatchEvent(new Event('input'));
+}
+
+// Функция для быстрого выбора всех найденных тегов
+function selectAllVisible() {
+    const visibleCheckboxes = document.querySelectorAll('.tag-option:not(.hidden) input[type="checkbox"]');
+    visibleCheckboxes.forEach(function(checkbox) {
+        checkbox.checked = true;
+    });
+    updateSelectedTags();
+}
+
+// Функция для быстрой очистки всех выбранных тегов
+function clearAllTags() {
+    const checkboxes = document.querySelectorAll('.tags-selection input[type="checkbox"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
+    });
+    updateSelectedTags();
+}
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем кнопки быстрого управления тегами
+    const controlsHtml = `
+        <div class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllVisible()">
+                <i class="fas fa-check-double"></i> Выбрать найденные
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllTags()">
+                <i class="fas fa-times"></i> Очистить все
+            </button>
+        </div>
+    `;
+    
+    const tagsSelection = document.querySelector('.tags-selection');
+    tagsSelection.insertAdjacentHTML('beforebegin', controlsHtml);
+    
     // Добавляем обработчики на все чекбоксы тегов
     const tagCheckboxes = document.querySelectorAll('.tags-selection input[type="checkbox"]');
     tagCheckboxes.forEach(function(checkbox) {
@@ -268,41 +562,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('tagSearch').addEventListener('focus', function() {
         this.select();
     });
-});
 
-// Функция для быстрого выбора всех найденных тегов
-function selectAllVisible() {
-    const visibleCheckboxes = document.querySelectorAll('.tag-option:not(.hidden) input[type="checkbox"]');
-    visibleCheckboxes.forEach(function(checkbox) {
-        checkbox.checked = true;
-    });
-    updateSelectedTags();
-}
-
-// Функция для быстрой очистки всех выбранных тегов
-function clearAllTags() {
-    const checkboxes = document.querySelectorAll('.tags-selection input[type="checkbox"]');
-    checkboxes.forEach(function(checkbox) {
-        checkbox.checked = false;
-    });
-    updateSelectedTags();
-}
-
-// Добавляем кнопки быстрого управления
-document.addEventListener('DOMContentLoaded', function() {
-    const controlsHtml = `
-        <div class="d-flex gap-2 mb-2">
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllVisible()">
-                <i class="fas fa-check-double"></i> Выбрать найденные
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllTags()">
-                <i class="fas fa-times"></i> Очистить все
-            </button>
-        </div>
-    `;
+    // Инициализация загрузки фото
+    setupPhotoUpload();
     
-    const tagsSelection = document.querySelector('.tags-selection');
-    tagsSelection.insertAdjacentHTML('beforebegin', controlsHtml);
+    // Инициализация редактора Markdown
+    setupMarkdownEditor();
 });
 </script>
 {% endblock %}

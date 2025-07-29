@@ -679,6 +679,10 @@
                     <input type="text" name="search" class="form-control search-input" 
                            placeholder="Введите название товара, артикул или описание..." 
                            value="{{ search_query }}">
+                    <!-- Сохраняем текущий фильтр тега -->
+                    {% if request.GET.tag %}
+                        <input type="hidden" name="tag" value="{{ request.GET.tag }}">
+                    {% endif %}
                 </div>
                 <div class="col-md-4">
                     <button type="submit" class="btn search-btn w-100">
@@ -736,12 +740,12 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Status Badge -->
-                    <div class="product-status {% if product.available_quantity <= 0 %}status-out{% elif product.available_quantity <= 3 %}status-low{% else %}status-available{% endif %}">
-                        {% if product.available_quantity <= 0 %}
-                            <i class="fas fa-times-circle me-1"></i>Нет в наличии
-                        {% elif product.available_quantity <= 3 %}
-                            <i class="fas fa-exclamation-triangle me-1"></i>Осталось {{ product.available_quantity }}
+                    <!-- Status Badge with improved logic -->
+                    <div class="product-status {% if product.get_availability_status == 'out' %}status-out{% elif product.get_availability_status == 'low' %}status-low{% else %}status-available{% endif %}">
+                        {% if product.get_availability_status == 'out' %}
+                            <i class="fas fa-times-circle me-1"></i>Осталось: 0
+                        {% elif product.get_availability_status == 'low' %}
+                            <i class="fas fa-exclamation-triangle me-1"></i>Осталось: {{ product.available_quantity }}
                         {% else %}
                             <i class="fas fa-check-circle me-1"></i>В наличии: {{ product.available_quantity }}
                         {% endif %}
@@ -819,14 +823,33 @@
 
 <script>
 // Global variables
-let sidebarOpen = true; // По умолчанию открыта
+let sidebarOpen = true;
+let expandedTags = new Set(); // Сохраняем состояние раскрытых тегов
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Восстанавливаем состояние раскрытых тегов из localStorage
+    const savedExpandedTags = localStorage.getItem('expandedTags');
+    if (savedExpandedTags) {
+        expandedTags = new Set(JSON.parse(savedExpandedTags));
+        expandedTags.forEach(tagId => {
+            restoreTagState(tagId);
+        });
+    }
+
+    // Если есть активный тег, раскрываем его родительскую группу
+    const activeTag = document.querySelector('.tag-item.child.active');
+    if (activeTag) {
+        const parentContainer = activeTag.closest('.tag-children');
+        if (parentContainer) {
+            const tagId = parentContainer.id.replace('children-', '');
+            expandTag(tagId);
+        }
+    }
+    
     // На десктопе оставляем боковую панель открытой по умолчанию
     if (window.innerWidth > 768) {
         sidebarOpen = true;
-        // Ничего не делаем, sidebar уже открыта по CSS
     } else {
         // На мобильных закрыта по умолчанию
         sidebarOpen = false;
@@ -839,6 +862,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // AJAX forms
     setupAjaxForms();
 });
+
+// Сохранение состояния тегов в localStorage
+function saveTagState() {
+    localStorage.setItem('expandedTags', JSON.stringify([...expandedTags]));
+}
+
+// Восстановление состояния тега
+function restoreTagState(tagId) {
+    const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
+    const childrenContainer = document.getElementById(`children-${tagId}`);
+    
+    if (tagItem && childrenContainer) {
+        tagItem.classList.add('expanded');
+        childrenContainer.classList.add('expanded');
+    }
+}
+
+// Раскрытие тега
+function expandTag(tagId) {
+    expandedTags.add(tagId);
+    restoreTagState(tagId);
+    saveTagState();
+}
+
+// Свертывание тега
+function collapseTag(tagId) {
+    expandedTags.delete(tagId);
+    const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
+    const childrenContainer = document.getElementById(`children-${tagId}`);
+    
+    if (tagItem && childrenContainer) {
+        tagItem.classList.remove('expanded');
+        childrenContainer.classList.remove('expanded');
+    }
+    saveTagState();
+}
 
 // Toggle sidebar
 function toggleSidebar() {
@@ -883,7 +942,7 @@ function closeSidebarMobile() {
     }
 }
 
-// Toggle tag children with improved logic
+// Toggle tag children with state preservation
 function toggleTagChildren(tagId, event) {
     event.preventDefault();
     event.stopPropagation();
@@ -896,25 +955,9 @@ function toggleTagChildren(tagId, event) {
     const isExpanded = tagItem.classList.contains('expanded');
     
     if (isExpanded) {
-        // Закрываем список
-        tagItem.classList.remove('expanded');
-        childrenContainer.classList.remove('expanded');
+        collapseTag(tagId);
     } else {
-        // Сначала закрываем все другие открытые списки
-        document.querySelectorAll('.tag-item.has-children.expanded').forEach(item => {
-            if (item !== tagItem) {
-                item.classList.remove('expanded');
-            }
-        });
-        document.querySelectorAll('.tag-children.expanded').forEach(container => {
-            if (container !== childrenContainer) {
-                container.classList.remove('expanded');
-            }
-        });
-        
-        // Открываем этот список
-        tagItem.classList.add('expanded');
-        childrenContainer.classList.add('expanded');
+        expandTag(tagId);
     }
 }
 

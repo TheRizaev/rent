@@ -360,7 +360,8 @@ def inventory_view(request):
 @user_passes_test(is_admin)
 def admin_create_order(request):
     if request.method == 'POST':
-        form = OrderForm(request.POST)
+        # Передаем пользователя в форму для доступа к полю deposit_amount
+        form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
             order = form.save(commit=False)
             order.created_by_admin = True
@@ -418,7 +419,8 @@ def admin_create_order(request):
             messages.success(request, 'Заявка успешно создана!')
             return redirect('admin_order_detail', order_id=order.id)
     else:
-        form = OrderForm()
+        # Передаем пользователя и при GET запросе
+        form = OrderForm(user=request.user)
     
     products = Product.objects.all().order_by('name')
     
@@ -698,7 +700,8 @@ def edit_order(request, order_id):
         return redirect('admin_order_detail', order_id=order.id)
     
     if request.method == 'POST':
-        form = OrderForm(request.POST, instance=order)
+        # Передаем пользователя в форму
+        form = OrderForm(request.POST, instance=order, user=request.user)
         if form.is_valid():
             order = form.save(commit=False)
             
@@ -785,7 +788,8 @@ def edit_order(request, order_id):
             messages.success(request, 'Заявка успешно обновлена!')
             return redirect('admin_order_detail', order_id=order.id)
     else:
-        form = OrderForm(instance=order)
+        # Передаем пользователя и при GET запросе
+        form = OrderForm(instance=order, user=request.user)
 
     all_products = Product.objects.all()
     
@@ -797,7 +801,6 @@ def edit_order(request, order_id):
             'price': float(item.product.daily_price),
             'quantity': item.quantity
         })
-    
     
     context = {
         'form': form,
