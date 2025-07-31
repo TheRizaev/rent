@@ -146,15 +146,25 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         self.name = self.name.strip().lower()
         
-        # Если штрих-код не указан, генерируем его
         if not self.barcode:
             self.barcode = self.generate_ean13_barcode()
         
-        # Артикул всегда равен штрих-коду
         self.article = self.barcode
         
         if self.description:
             self.description = self.description.strip().lower()
+        
+        if self.pk:  # Если товар уже существует
+            old_product = Product.objects.get(pk=self.pk)
+            quantity_diff = self.quantity - old_product.quantity
+            # Обновляем доступное количество на разницу
+            self.available_quantity = old_product.available_quantity + quantity_diff
+            # Убеждаемся, что доступное количество не больше общего и не меньше 0
+            self.available_quantity = max(0, min(self.available_quantity, self.quantity))
+        else:  # Если новый товар
+            # Для нового товара доступное количество равно общему
+            self.available_quantity = self.quantity
+        
         super().save(*args, **kwargs)
 
     def get_display_name(self):

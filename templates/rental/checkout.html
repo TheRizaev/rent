@@ -6,6 +6,20 @@
 {% block content %}
 <h1>Оформление заявки</h1>
 
+{% if form.errors %}
+    <div class="alert alert-danger">
+        <h5>Ошибки в форме:</h5>
+        {{ form.errors }}
+    </div>
+{% endif %}
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        <h5>Общие ошибки:</h5>
+        {{ form.non_field_errors }}
+    </div>
+{% endif %}
+
 <div class="row">
     <div class="col-lg-8">
         <div class="card">
@@ -29,14 +43,14 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label for="{{ form.phone2.id_for_label }}" class="form-label">Дополнительный телефон</label>
+                            <label for="{{ form.phone2.id_for_label }}" class="form-label optional-field">Дополнительный телефон</label>
                             {{ form.phone2 }}
                             {% if form.phone2.errors %}
                                 <div class="text-danger">{{ form.phone2.errors }}</div>
                             {% endif %}
                         </div>
                         
-                        <!-- ИСПРАВЛЕНО: убираем обязательность -->
+                        <!-- Новые поля -->
                         <div class="col-md-6">
                             <label for="{{ form.production_name.id_for_label }}" class="form-label optional-field">Название продакшена</label>
                             {{ form.production_name }}
@@ -192,7 +206,7 @@
     font-weight: bold;
 }
 
-/* ИСПРАВЛЕНО: убираем звездочки для необязательных полей */
+/* Убираем звездочки для необязательных полей */
 .form-label.optional-field::after {
     content: " (необязательно)";
     color: #6c757d;
@@ -208,20 +222,15 @@
 let cartItems = [];
 let dailyTotal = 0;
 
-// Функция для форматирования цен (аналог format_price в Django)
+// Функция для форматирования цен
 function formatPrice(price) {
     if (price == null || price == undefined) {
         return "0";
     }
     
     try {
-        // Преобразуем в число
         let value = parseFloat(price);
-        
-        // Округляем до целого числа
         value = Math.round(value);
-        
-        // Форматируем с пробелами как разделителями тысяч
         return value.toLocaleString('ru-RU').replace(/,/g, ' ');
     } catch (error) {
         return String(price);
@@ -277,116 +286,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Добавляем подсказки для новых полей
     setupFieldTooltips();
     
-    // ИСПРАВЛЕНО: Добавляем обработчик формы
-    setupFormHandler();
+    // ВАЖНО: Убираем setupFormHandler() - он блокировал отправку формы
+    // setupFormHandler(); // УБРАНО - это было причиной проблемы
 });
-
-// ИСПРАВЛЕНО: Обработчик отправки формы
-function setupFormHandler() {
-    const form = document.getElementById('checkoutForm');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    if (!form || !submitBtn) return;
-    
-    form.addEventListener('submit', function(e) {
-        // Показываем состояние загрузки
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Отправляем заявку...';
-        
-        // Проверяем валидность формы - если невалидна, останавливаем отправку
-        if (!validateForm()) {
-            e.preventDefault();
-            // Сбрасываем состояние кнопки при ошибке
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check"></i> Отправить заявку';
-            return false;
-        }
-        
-        // Если всё ОК, форма отправится автоматически (не preventDefault!)
-        // JavaScript не блокирует отправку формы
-    });
-}
-
-// ИСПРАВЛЕНО: Валидация формы
-function validateForm() {
-    const requiredFields = [
-        '{{ form.contact_person.id_for_label }}',
-        '{{ form.phone1.id_for_label }}',
-        '{{ form.rental_start.id_for_label }}',
-        '{{ form.rental_end.id_for_label }}'
-    ];
-
-    let hasErrors = false;
-    const errors = [];
-
-    requiredFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field && !field.value.trim()) {
-            hasErrors = true;
-            const label = document.querySelector(`label[for="${fieldId}"]`);
-            const fieldName = label ? label.textContent.replace(' *', '') : 'Поле';
-            errors.push(`${fieldName} обязательно для заполнения`);
-            field.classList.add('is-invalid');
-        } else if (field) {
-            field.classList.remove('is-invalid');
-        }
-    });
-
-    if (hasErrors) {
-        // Показываем ошибки пользователю
-        showErrorMessage('Пожалуйста, заполните все обязательные поля:\n\n' + errors.join('\n'));
-        
-        // Фокусируемся на первом невалидном поле
-        const firstInvalid = document.querySelector('.is-invalid');
-        if (firstInvalid) {
-            firstInvalid.focus();
-            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        
-        return false;
-    }
-    
-    return true;
-}
-
-// Функция для показа ошибок
-function showErrorMessage(message) {
-    // Создаем всплывающее уведомление вместо alert
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
-    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 400px; max-width: 90vw;';
-    alertDiv.innerHTML = `
-        <div class="d-flex align-items-start">
-            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
-            <div>
-                <strong>Ошибка при отправке заявки</strong><br>
-                <small>${message.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>')}</small>
-            </div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    // Автоматически удаляем через 8 секунд
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 8000);
-}
 
 function calculateRentalDays() {
     const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
     const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
     
     if (!startDateInput.value || !endDateInput.value) {
-        // Если даты не выбраны, скрываем информацию
         document.getElementById('rentalDaysInfo').style.display = 'none';
         document.getElementById('grandTotal').textContent = formatPrice(dailyTotal) + ' сум';
         document.getElementById('totalCalculation').textContent = 'Выберите даты аренды для расчета итоговой суммы';
-        
-        // Обновляем отображение товаров
         updateItemsDisplay(1);
         return;
     }
@@ -436,10 +347,8 @@ function updateItemsDisplay(days) {
         if (itemElement) {
             const totalPrice = item.dailyPrice * item.quantity * days;
             
-            // Обновляем отображение цены с форматированием
             itemElement.querySelector('.item-total').textContent = formatPrice(totalPrice) + ' сум';
             
-            // Обновляем расчет с форматированием
             const calculation = itemElement.querySelector('.item-calculation');
             if (days > 1) {
                 calculation.innerHTML = `${formatPrice(item.dailyPrice)} сум/день × ${item.quantity} шт. × ${days} дн.`;
@@ -448,13 +357,6 @@ function updateItemsDisplay(days) {
             }
         }
     });
-}
-
-// Форматирование даты для отображения
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-    return date.toLocaleDateString('ru-RU', options);
 }
 
 // Настройка подсказок для полей
@@ -486,67 +388,9 @@ function setupFieldTooltips() {
         const element = document.getElementById(field.id);
         if (element) {
             element.setAttribute('title', field.tooltip);
-            element.addEventListener('focus', function() {
-                showTooltip(this, field.tooltip);
-            });
         }
     });
 }
-
-// Показать подсказку
-function showTooltip(element, text) {
-    // Удаляем существующие подсказки
-    const existingTooltip = document.querySelector('.field-tooltip');
-    if (existingTooltip) {
-        existingTooltip.remove();
-    }
-
-    const tooltip = document.createElement('div');
-    tooltip.className = 'field-tooltip position-absolute bg-dark text-white p-2 rounded';
-    tooltip.style.cssText = `
-        font-size: 0.8rem;
-        z-index: 1000;
-        max-width: 300px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
-    `;
-    tooltip.textContent = text;
-
-    document.body.appendChild(tooltip);
-
-    // Позиционируем подсказку
-    const rect = element.getBoundingClientRect();
-    tooltip.style.left = rect.left + 'px';
-    tooltip.style.top = (rect.bottom + 5) + 'px';
-
-    // Показываем с анимацией
-    setTimeout(() => {
-        tooltip.style.opacity = '1';
-    }, 10);
-
-    // Удаляем при потере фокуса
-    element.addEventListener('blur', () => {
-        if (tooltip.parentNode) {
-            tooltip.style.opacity = '0';
-            setTimeout(() => tooltip.remove(), 300);
-        }
-    }, { once: true });
-}
-
-// Подсказки при наведении на даты
-document.addEventListener('DOMContentLoaded', function() {
-    const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
-    const endDateInput = document.getElementById('{{ form.rental_end.id_for_label }}');
-    
-    if (startDateInput) {
-        startDateInput.setAttribute('title', 'Выберите дату начала аренды');
-    }
-    
-    if (endDateInput) {
-        endDateInput.setAttribute('title', 'Выберите дату окончания аренды');
-    }
-});
 
 // Автоматическое форматирование телефонных номеров
 document.addEventListener('DOMContentLoaded', function() {
@@ -561,7 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 let value = e.target.value.replace(/\D/g, '');
                 
                 if (value.startsWith('998')) {
-                    // Формат: +998 (99) 123-45-67
                     if (value.length >= 3) {
                         value = '+998 ' + value.substring(3);
                     }
@@ -572,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         value = value.substring(0, 14) + '-' + value.substring(14, 16) + '-' + value.substring(16, 18);
                     }
                 } else if (value.length > 0 && !value.startsWith('998')) {
-                    // Добавляем +998 автоматически
                     value = '998' + value;
                     e.target.value = value;
                     e.target.dispatchEvent(new Event('input'));
