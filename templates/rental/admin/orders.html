@@ -1,5 +1,5 @@
 {% extends 'rental/admin/base_admin.html' %}
-
+{% load rental_filters %}
 {% block title %}Заявки - Админ панель{% endblock %}
 
 {% block content %}
@@ -36,7 +36,7 @@
                 <thead>
                     <tr>
                         <th>№</th>
-                        <th>Контактное лицо</th>
+                        <th>Название проекта</th>
                         <th>Телефон</th>
                         <th>Период аренды</th>
                         <th>Сумма</th>
@@ -50,10 +50,10 @@
                     {% for order in orders %}
                     <tr>
                         <td>#{{ order.id }}</td>
-                        <td>{{ order.contact_person }}</td>
+                        <td>{{ order.project_name }}</td>
                         <td>{{ order.phone1 }}</td>
                         <td>{{ order.rental_start|date:"d.m.Y" }} - {{ order.rental_end|date:"d.m.Y" }}</td>
-                        <td>{{ order.total_amount }} сум</td>
+                        <td>{{ order.total_amount|format_price }} сум</td>
                         <td>
                             {% if order.status == 'pending' %}
                                 <span class="badge bg-warning text-dark fs-6 px-3 py-2">

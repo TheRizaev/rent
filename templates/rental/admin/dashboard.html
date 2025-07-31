@@ -87,7 +87,7 @@
                         <thead>
                             <tr>
                                 <th>№</th>
-                                <th>Контактное лицо</th>
+                                <th>Название проекта</th>
                                 <th>Телефон</th>
                                 <th>Сумма</th>
                                 <th>Статус</th>
@@ -99,7 +99,7 @@
                             {% for order in recent_orders %}
                             <tr>
                                 <td>#{{ order.id }}</td>
-                                <td>{{ order.contact_person }}</td>
+                                <td>{{ order.project_name }}</td>
                                 <td>{{ order.phone1 }}</td>
                                 <td>{{ order.total_amount }} сум</td>
                                 <td>

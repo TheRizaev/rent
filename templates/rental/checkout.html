@@ -93,6 +93,9 @@
                                 <div class="text-danger">{{ form.comment.errors }}</div>
                             {% endif %}
                         </div>
+                        <div style="display: none;">
+                            {{ form.deposit_amount }}
+                        </div>
                     </div>
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary" id="submitBtn">

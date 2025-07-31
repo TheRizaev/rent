@@ -34,6 +34,7 @@
                 <h5>Информация о заявке</h5>
             </div>
             <div class="card-body">
+                <!-- Контактная информация -->
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Контактное лицо:</strong></div>
                     <div class="col-sm-9">{{ order.contact_person }}</div>
@@ -48,6 +49,31 @@
                     <div class="col-sm-9">{{ order.phone2 }}</div>
                 </div>
                 {% endif %}
+                
+                <!-- НОВЫЕ ПОЛЯ -->
+                {% if order.production_name %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Название продакшена:</strong></div>
+                    <div class="col-sm-9">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border px-3 py-2">
+                            <i class="fas fa-video me-1"></i>{{ order.production_name }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.project_name %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Название проекта:</strong></div>
+                    <div class="col-sm-9">
+                        <span class="badge bg-success bg-opacity-10 text-success border px-3 py-2">
+                            <i class="fas fa-project-diagram me-1"></i>{{ order.project_name }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Период аренды -->
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Период аренды:</strong></div>
                     <div class="col-sm-9">
@@ -55,10 +81,14 @@
                         <span class="badge bg-info ms-2">{{ order.get_rental_days }} дн.</span>
                     </div>
                 </div>
+                
+                <!-- Дата создания -->
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Дата создания:</strong></div>
                     <div class="col-sm-9">{{ order.created_at|date:"d.m.Y H:i" }}</div>
                 </div>
+                
+                <!-- Создана админом -->
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Создана админом:</strong></div>
                     <div class="col-sm-9">
@@ -69,19 +99,41 @@
                         {% endif %}
                     </div>
                 </div>
+                
+                <!-- Комментарий -->
                 {% if order.comment %}
                 <div class="row mb-3">
                     <div class="col-sm-3"><strong>Комментарий:</strong></div>
                     <div class="col-sm-9">{{ order.get_display_comment }}</div>
                 </div>
                 {% endif %}
+                
+                <!-- Финансовая информация -->
+                <hr class="my-4">
+                <h6 class="text-muted mb-3">
+                    <i class="fas fa-calculator me-2"></i>Финансовая информация
+                </h6>
+                
                 <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Общая сумма:</strong></div>
+                    <div class="col-sm-3"><strong>Стоимость аренды:</strong></div>
                     <div class="col-sm-9">
                         <span class="h5 text-success">{{ order.total_amount|format_price }} сум</span>
                         <small class="text-muted d-block">{{ order.get_daily_average|format_price }} сум/день</small>
                     </div>
                 </div>
+                
+                <!-- СУММА ЗАЛОГА -->
+                {% if order.deposit_amount > 0 %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Сумма залога:</strong></div>
+                    <div class="col-sm-9">
+                        <span class="h6 text-warning">
+                            <i class="fas fa-shield-alt me-1"></i>{{ order.deposit_amount|format_price }} сум
+                        </span>
+                        <small class="text-muted d-block">Залог за оборудование</small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -185,7 +237,7 @@
                     </form>
                 {% endif %}
                 
-                <!-- ИСПРАВЛЕНО: Статус оплаты можно изменять всегда -->
+                <!-- Статус оплаты можно изменять всегда -->
                 <form id="paymentForm">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -200,6 +252,47 @@
                         <i class="fas fa-credit-card"></i> Обновить статус оплаты
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Финансовая сводка -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Финансовая сводка</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Стоимость аренды:</span>
+                        <strong class="text-success">{{ order.total_amount|format_price }} сум</strong>
+                    </div>
+                </div>
+                
+                {% if order.deposit_amount > 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Сумма залога:</span>
+                        <strong class="text-warning">{{ order.deposit_amount|format_price }} сум</strong>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                {% endif %}
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>За день:</span>
+                        <span class="text-muted">{{ order.get_daily_average|format_price }} сум/день</span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Период:</span>
+                        <span class="badge bg-info">{{ order.get_rental_days }} дн.</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -254,7 +347,7 @@ document.getElementById('statusForm')?.addEventListener('submit', function(e) {
 });
 {% endif %}
 
-// ИСПРАВЛЕНО: Обработка формы статуса оплаты - можно менять всегда
+// Обработка формы статуса оплаты - можно менять всегда
 document.getElementById('paymentForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     

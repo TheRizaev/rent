@@ -21,6 +21,10 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 import os
 
+from django.db.models import Q, Case, When, IntegerField, Value, F
+from django.db.models.functions import Length
+import re
+
 def preview_page(request):
     return render(request, 'rental/preview.html')
 

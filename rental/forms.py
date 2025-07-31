@@ -7,14 +7,14 @@ class OrderForm(forms.ModelForm):
         model = Order
         fields = ['contact_person', 'phone1', 'phone2', 'production_name', 'project_name', 'deposit_amount', 'rental_start', 'rental_end', 'comment']
         widgets = {
-            'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите ФИО', 'required': True}),
-            'phone1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67', 'required': True}),
+            'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите ФИО'}),
+            'phone1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67'}),
             'phone2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 (99) 123-45-67 (необязательно)'}),
             'production_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название продакшена'}),
             'project_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Название проекта'}),
             'deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
-            'rental_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': True}),
-            'rental_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': True}),
+            'rental_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'rental_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Дополнительная информация (необязательно)'}),
         }
     
