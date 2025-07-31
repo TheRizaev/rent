@@ -176,15 +176,16 @@ class Product(models.Model):
         return ''
     
     def get_availability_status(self):
-        """Возвращает статус доступности товара с учетом общего количества"""
+        """Возвращает статус доступности товара с правильной логикой"""
         if self.available_quantity <= 0:
-            return 'out'  # Нет в наличии
-        elif self.quantity > 50 and self.available_quantity <= 10:
-            return 'low'  # Мало (для товаров с большим общим количеством)
-        elif self.available_quantity <= 3 and self.quantity <= 50:
-            return 'low'  # Мало (для товаров с небольшим общим количеством)
-        else:
-            return 'available'  # В наличии
+            return 'out'  # Нет в наличии (красный)
+        
+        # Логика для желтого статуса: только если общее количество >= 50 И доступно < 10
+        if self.quantity >= 50 and self.available_quantity < 10:
+            return 'low'  # Мало (желтый)
+        
+        # Во всех остальных случаях - зеленый
+        return 'available'  # В наличии (зеленый)
     
     def __str__(self):
         return self.get_display_name()

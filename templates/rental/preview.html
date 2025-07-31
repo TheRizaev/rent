@@ -722,6 +722,379 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+
+        .contact-location {
+            padding: 8rem 0;
+            background: var(--gray-light);
+            position: relative;
+        }
+
+        .contact-location::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--blue), transparent);
+        }
+
+        .contact-info {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            height: 100%;
+        }
+
+        .contact-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 2.5rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .contact-item:hover {
+            background: white;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transform: translateX(10px);
+        }
+
+        .contact-item:nth-child(1):hover { border-left-color: #28a745; }
+        .contact-item:nth-child(2):hover { border-left-color: #0088cc; }
+        .contact-item:nth-child(3):hover { border-left-color: #dc3545; }
+        .contact-item:nth-child(4):hover { border-left-color: #6f42c1; }
+        .contact-item:nth-child(5):hover { border-left-color: #fd7e14; }
+
+        .contact-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .phone-icon { background: linear-gradient(135deg, #28a745, #20c997); }
+        .telegram-icon { background: linear-gradient(135deg, #0088cc, #0099dd); }
+        .email-icon { background: linear-gradient(135deg, #dc3545, #e74c3c); }
+        .address-icon { background: linear-gradient(135deg, #6f42c1, #8f5bff); }
+        .hours-icon { background: linear-gradient(135deg, #fd7e14, #ff8c42); }
+
+        .contact-details h4 {
+            color: var(--text-color);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-link {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            color: var(--purple);
+            text-decoration: underline;
+        }
+
+        .contact-description {
+            color: var(--gray);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .working-hours {
+            margin-bottom: 0.5rem;
+        }
+
+        .hours-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .days {
+            color: var(--text-color);
+        }
+
+        .time {
+            color: var(--blue);
+        }
+
+        /* Map Container */
+        .map-container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            height: 100%;
+        }
+
+        .map-wrapper {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            margin-bottom: 2rem;
+        }
+
+        .yandex-map {
+            width: 100%;
+            height: 400px;
+            border: none;
+            display: block;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .map-wrapper:hover .map-overlay {
+            opacity: 1;
+        }
+
+        .map-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .map-action-btn {
+            background: white;
+            color: var(--text-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .map-action-btn:hover {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Location Features */
+        .location-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        .feature-item i {
+            font-size: 1.2rem;
+        }
+
+        /* Quick Contact Form */
+        .quick-contact-form {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .form-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+        }
+
+        .form-subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .contact-form .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .contact-form .form-control:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            background: white;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, var(--blue), var(--purple));
+            border: none;
+            border-radius: 25px;
+            color: white;
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .form-note {
+            color: var(--gray);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .contact-location {
+                padding: 4rem 0;
+            }
+            
+            .contact-info,
+            .map-container,
+            .quick-contact-form {
+                padding: 2rem 1.5rem;
+                margin-bottom: 2rem;
+            }
+            
+            .contact-title,
+            .form-title {
+                font-size: 1.5rem;
+            }
+            
+            .contact-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .contact-icon {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            .yandex-map {
+                height: 300px;
+            }
+            
+            .location-features {
+                grid-template-columns: 1fr;
+            }
+            
+            .map-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .map-action-btn {
+                font-size: 0.8rem;
+                padding: 0.5rem 1rem;
+            }
+            
+            .hours-row {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .contact-item {
+                padding: 1rem;
+            }
+            
+            .contact-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+            
+            .contact-details h4 {
+                font-size: 1rem;
+            }
+            
+            .contact-link {
+                font-size: 1rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .contact-item {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .contact-item:nth-child(1) { animation-delay: 0.1s; }
+        .contact-item:nth-child(2) { animation-delay: 0.2s; }
+        .contact-item:nth-child(3) { animation-delay: 0.3s; }
+        .contact-item:nth-child(4) { animation-delay: 0.4s; }
+        .contact-item:nth-child(5) { animation-delay: 0.5s; }
     </style>
 </head>
 <body>
@@ -910,6 +1283,122 @@
                </div>
            </div>
        </section>
+
+       <section class="contact-location" id="contact">
+            <div class="container">
+                <h2 class="section-title animate-on-scroll">Свяжитесь с нами</h2>
+                <p class="section-subtitle animate-on-scroll">Мы всегда готовы помочь вам с выбором оборудования</p>
+                
+                <div class="row g-4">
+                    <!-- Contact Information -->
+                    <div class="col-lg-6">
+                        <div class="contact-info animate-on-scroll">
+                            <h3 class="contact-title">Наши контакты</h3>
+                            
+                            <!-- Phone -->
+                            <div class="contact-item">
+                                <div class="contact-icon phone-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Телефон</h4>
+                                    <a href="tel:+998901234567" class="contact-link">+998 (90) 123-45-67</a>
+                                    <p class="contact-description">Звоните для быстрой консультации</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Telegram -->
+                            <div class="contact-item">
+                                <div class="contact-icon telegram-icon">
+                                    <i class="fab fa-telegram"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Telegram</h4>
+                                    <a href="https://t.me/abstract_rental" class="contact-link" target="_blank">@abstract_rental</a>
+                                    <p class="contact-description">Пишите в любое время</p>
+                                </div>
+                            </div>
+                            
+                            {% comment %} <!-- Address -->
+                            <div class="contact-item">
+                                <div class="contact-icon address-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Адрес</h4>
+                                    <p class="contact-link">г. Ташкент, Яшнабадский район<br>ул. Махзуны, 163</p>, махаллинский сход граждан Бешбола
+                                    <p class="contact-description">Приезжайте к нам в офис</p>
+                                </div>
+                            </div> {% endcomment %}
+                            
+                            <!-- Working Hours -->
+                            <div class="contact-item">
+                                <div class="contact-icon hours-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Часы работы</h4>
+                                    <div class="working-hours">
+                                        <div class="hours-row">
+                                            <span class="days">Пн - Пт:</span>
+                                            <span class="time">09:00 - 19:00</span>
+                                        </div>
+                                        <div class="hours-row">
+                                            <span class="days">Сб:</span>
+                                            <span class="time">10:00 - 16:00</span>
+                                        </div>
+                                        <div class="hours-row">
+                                            <span class="days">Вс:</span>
+                                            <span class="time">Выходной</span>
+                                        </div>
+                                    </div>
+                                    <p class="contact-description">Доставка работает 24/7</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map -->
+                    <div class="col-lg-6">
+                        <div class="map-container animate-on-scroll">
+                            <h3 class="contact-title">Мы на карте</h3>
+                            <div class="map-wrapper">
+                                <!-- Yandex Maps iframe -->
+                                <iframe 
+                                    src="https://yandex.ru/map-widget/v1/-/CHXsRTmR" 
+                                    class="yandex-map"
+                                    allowfullscreen="true">
+                                </iframe>
+                                
+                                <!-- Map overlay with actions -->
+                                <div class="map-overlay">
+                                    <div class="map-actions">
+                                        <a href="https://yandex.uz/maps/-/CHXsRTmR" 
+                                        target="_blank" 
+                                        class="map-action-btn">
+                                            <i class="fas fa-external-link-alt me-2"></i>
+                                            Открыть в Яндекс.Картах
+                                        </a>
+                                        <button class="map-action-btn" onclick="copyAddress()">
+                                            <i class="fas fa-copy me-2"></i>
+                                            Скопировать адрес
+                                        </button>
+                                        <a href="https://yandex.uz/maps/-/CHXsRTmR" 
+                                        target="_blank" 
+                                        class="map-action-btn">
+                                            <i class="fas fa-route me-2"></i>
+                                            Построить маршрут
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
        <!-- CTA Section -->
        <section class="cta-section" id="contact">
@@ -1101,6 +1590,127 @@
                obj.style.transform += ` translate(${mouseX * speed}px, ${mouseY * speed}px)`;
            });
        });
+
+       function copyAddress() {
+            const address = "г. Ташкент, Юнусабадский район, ул. Шахрисабз, 25";
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(address).then(() => {
+                    showNotification('Адрес скопирован в буфер обмена!', 'success');
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(address);
+                });
+            } else {
+                fallbackCopyTextToClipboard(address);
+            }
+        }
+
+        // Fallback copy function
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showNotification('Адрес скопирован в буфер обмена!', 'success');
+                } else {
+                    showNotification('Не удалось скопировать адрес', 'error');
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                showNotification('Не удалось скопировать адрес', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // Quick contact form handler
+        document.getElementById('quickContactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Отправляем...';
+            submitBtn.disabled = true;
+            
+            // Simulate form submission (replace with actual form handling)
+            setTimeout(() => {
+                submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Отправлено!';
+                submitBtn.style.background = 'linear-gradient(45deg, #28a745, #20c997)';
+                
+                showNotification('Спасибо! Мы свяжемся с вами в ближайшее время.', 'success');
+                
+                // Reset form
+                this.reset();
+                
+                // Reset button after delay
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.style.background = '';
+                    submitBtn.disabled = false;
+                }, 3000);
+            }, 2000);
+        });
+
+        // Phone input formatting
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.querySelector('input[type="tel"]');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    
+                    if (value.startsWith('998')) {
+                        if (value.length >= 3) {
+                            value = '+998 ' + value.substring(3);
+                        }
+                        if (value.length >= 7) {
+                            value = value.substring(0, 5) + '(' + value.substring(5, 7) + ') ' + value.substring(7);
+                        }
+                        if (value.length >= 14) {
+                            value = value.substring(0, 14) + '-' + value.substring(14, 16) + '-' + value.substring(16, 18);
+                        }
+                    } else if (value.length > 0 && !value.startsWith('998')) {
+                        value = '998' + value;
+                        e.target.value = value;
+                        e.target.dispatchEvent(new Event('input'));
+                        return;
+                    }
+                    
+                    e.target.value = value;
+                });
+            }
+        });
+
+        // Notification function (if not already defined)
+        if (typeof showNotification === 'undefined') {
+            function showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+                notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 5000);
+            }
+        }
    </script>
 </body>
 </html>

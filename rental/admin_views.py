@@ -280,17 +280,28 @@ def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     
     if request.method == 'POST':
+        # ВАЖНО: Сохраняем старые значения ДО создания формы
+        old_quantity = product.quantity
+        old_available = product.available_quantity
+        
         form = ProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
-            # Обновляем доступное количество при изменении общего количества
-            old_quantity = product.quantity
-            new_product = form.save(commit=False)
-            quantity_diff = new_product.quantity - old_quantity
-            new_product.available_quantity = product.available_quantity + quantity_diff
-            new_product.save()
+            new_quantity = form.cleaned_data['quantity']
+            
+            quantity_diff = new_quantity - old_quantity
+            
+            new_available = old_available + quantity_diff
+            
+            new_available_bounded = max(0, min(new_available, new_quantity))
+            
+            updated_product = form.save(commit=False)
+            
+            updated_product.available_quantity = new_available_bounded
+            updated_product.save()
             form.save_m2m()
             
-            messages.success(request, 'Товар успешно обновлен')
+            
+            messages.success(request, f'Товар успешно обновлен. Общее: {updated_product.quantity}, доступное: {updated_product.available_quantity}')
             return redirect('product_management')
     else:
         form = ProductForm(instance=product)

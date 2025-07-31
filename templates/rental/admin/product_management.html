@@ -1,5 +1,5 @@
 {% extends 'rental/admin/base_admin.html' %}
-
+{% load rental_filters %}
 {% block title %}Управление товарами - Админ панель{% endblock %}
 
 {% block content %}
@@ -65,7 +65,7 @@
                                 <span class="badge bg-success">{{ product.available_quantity }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ product.daily_price }} сум</td>
+                        <td>{{ product.daily_price|format_price }} сум</td>
                         <td>{{ product.shelf }}</td>
                         <td>
                             <div class="btn-group" role="group">
