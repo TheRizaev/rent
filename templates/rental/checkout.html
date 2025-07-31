@@ -11,7 +11,7 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Контактная информация</h5>
-                <form method="post">
+                <form method="post" id="checkoutForm">
                     {% csrf_token %}
                     <div class="row g-3">
                         <div class="col-12">
@@ -36,16 +36,16 @@
                             {% endif %}
                         </div>
                         
-                        <!-- НОВЫЕ ПОЛЯ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ -->
+                        <!-- ИСПРАВЛЕНО: убираем обязательность -->
                         <div class="col-md-6">
-                            <label for="{{ form.production_name.id_for_label }}" class="form-label">Название продакшена</label>
+                            <label for="{{ form.production_name.id_for_label }}" class="form-label optional-field">Название продакшена</label>
                             {{ form.production_name }}
                             {% if form.production_name.errors %}
                                 <div class="text-danger">{{ form.production_name.errors }}</div>
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label for="{{ form.project_name.id_for_label }}" class="form-label">Название проекта</label>
+                            <label for="{{ form.project_name.id_for_label }}" class="form-label optional-field">Название проекта</label>
                             {{ form.project_name }}
                             {% if form.project_name.errors %}
                                 <div class="text-danger">{{ form.project_name.errors }}</div>
@@ -73,7 +73,7 @@
                             </div>
                         </div>
                         <div class="col-12">
-                            <label for="{{ form.comment.id_for_label }}" class="form-label">Комментарий</label>
+                            <label for="{{ form.comment.id_for_label }}" class="form-label optional-field">Комментарий</label>
                             {{ form.comment }}
                             {% if form.comment.errors %}
                                 <div class="text-danger">{{ form.comment.errors }}</div>
@@ -81,7 +81,7 @@
                         </div>
                     </div>
                     <div class="mt-4">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
                             <i class="fas fa-check"></i> Отправить заявку
                         </button>
                         <a href="{% url 'rental:cart' %}" class="btn btn-outline-secondary">
@@ -192,12 +192,12 @@
     font-weight: bold;
 }
 
-/* Убираем звездочки для необязательных полей */
-label[for="{{ form.phone2.id_for_label }}"]::after,
-label[for="{{ form.production_name.id_for_label }}"]::after,
-label[for="{{ form.project_name.id_for_label }}"]::after,
-label[for="{{ form.comment.id_for_label }}"]::after {
-    content: "";
+/* ИСПРАВЛЕНО: убираем звездочки для необязательных полей */
+.form-label.optional-field::after {
+    content: " (необязательно)";
+    color: #6c757d;
+    font-weight: normal;
+    font-style: italic;
 }
 </style>
 {% endblock %}
@@ -276,7 +276,105 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Добавляем подсказки для новых полей
     setupFieldTooltips();
+    
+    // ИСПРАВЛЕНО: Добавляем обработчик формы
+    setupFormHandler();
 });
+
+// ИСПРАВЛЕНО: Обработчик отправки формы
+function setupFormHandler() {
+    const form = document.getElementById('checkoutForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (!form || !submitBtn) return;
+    
+    form.addEventListener('submit', function(e) {
+        // Показываем состояние загрузки
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Отправляем заявку...';
+        
+        // Проверяем валидность формы - если невалидна, останавливаем отправку
+        if (!validateForm()) {
+            e.preventDefault();
+            // Сбрасываем состояние кнопки при ошибке
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Отправить заявку';
+            return false;
+        }
+        
+        // Если всё ОК, форма отправится автоматически (не preventDefault!)
+        // JavaScript не блокирует отправку формы
+    });
+}
+
+// ИСПРАВЛЕНО: Валидация формы
+function validateForm() {
+    const requiredFields = [
+        '{{ form.contact_person.id_for_label }}',
+        '{{ form.phone1.id_for_label }}',
+        '{{ form.rental_start.id_for_label }}',
+        '{{ form.rental_end.id_for_label }}'
+    ];
+
+    let hasErrors = false;
+    const errors = [];
+
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && !field.value.trim()) {
+            hasErrors = true;
+            const label = document.querySelector(`label[for="${fieldId}"]`);
+            const fieldName = label ? label.textContent.replace(' *', '') : 'Поле';
+            errors.push(`${fieldName} обязательно для заполнения`);
+            field.classList.add('is-invalid');
+        } else if (field) {
+            field.classList.remove('is-invalid');
+        }
+    });
+
+    if (hasErrors) {
+        // Показываем ошибки пользователю
+        showErrorMessage('Пожалуйста, заполните все обязательные поля:\n\n' + errors.join('\n'));
+        
+        // Фокусируемся на первом невалидном поле
+        const firstInvalid = document.querySelector('.is-invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        return false;
+    }
+    
+    return true;
+}
+
+// Функция для показа ошибок
+function showErrorMessage(message) {
+    // Создаем всплывающее уведомление вместо alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 400px; max-width: 90vw;';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+            <div>
+                <strong>Ошибка при отправке заявки</strong><br>
+                <small>${message.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>')}</small>
+            </div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Автоматически удаляем через 8 секунд
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 8000);
+}
 
 function calculateRentalDays() {
     const startDateInput = document.getElementById('{{ form.rental_start.id_for_label }}');
@@ -364,11 +462,11 @@ function setupFieldTooltips() {
     const fields = [
         {
             id: '{{ form.production_name.id_for_label }}',
-            tooltip: 'Укажите название вашей продакшн-компании или студии'
+            tooltip: 'Укажите название вашей продакшн-компании или студии (необязательно)'
         },
         {
             id: '{{ form.project_name.id_for_label }}',
-            tooltip: 'Название проекта, для которого арендуется оборудование'
+            tooltip: 'Название проекта, для которого арендуется оборудование (необязательно)'
         },
         {
             id: '{{ form.contact_person.id_for_label }}',
@@ -447,44 +545,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (endDateInput) {
         endDateInput.setAttribute('title', 'Выберите дату окончания аренды');
-    }
-});
-
-// Валидация формы перед отправкой
-document.querySelector('form').addEventListener('submit', function(e) {
-    const requiredFields = [
-        '{{ form.contact_person.id_for_label }}',
-        '{{ form.phone1.id_for_label }}',
-        '{{ form.rental_start.id_for_label }}',
-        '{{ form.rental_end.id_for_label }}'
-    ];
-
-    let hasErrors = false;
-    const errors = [];
-
-    requiredFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field && !field.value.trim()) {
-            hasErrors = true;
-            const label = document.querySelector(`label[for="${fieldId}"]`);
-            const fieldName = label ? label.textContent.replace(' *', '') : 'Поле';
-            errors.push(`${fieldName} обязательно для заполнения`);
-            field.classList.add('is-invalid');
-        } else if (field) {
-            field.classList.remove('is-invalid');
-        }
-    });
-
-    if (hasErrors) {
-        e.preventDefault();
-        alert('Пожалуйста, заполните все обязательные поля:\n\n' + errors.join('\n'));
-        
-        // Фокусируемся на первом невалидном поле
-        const firstInvalid = document.querySelector('.is-invalid');
-        if (firstInvalid) {
-            firstInvalid.focus();
-            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
     }
 });
 
