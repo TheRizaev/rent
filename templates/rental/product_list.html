@@ -886,44 +886,144 @@ let expandedTags = new Set(); // Сохраняем состояние раск�
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Восстанавливаем состояние боковой панели из localStorage
+    const savedSidebarState = localStorage.getItem('sidebarOpen');
+    if (savedSidebarState !== null) {
+        sidebarOpen = JSON.parse(savedSidebarState);
+    } else {
+        // По умолчанию: на десктопе открыта, на мобильных закрыта
+        sidebarOpen = window.innerWidth > 768;
+    }
+
     // Восстанавливаем состояние раскрытых тегов из localStorage
     const savedExpandedTags = localStorage.getItem('expandedTags');
     if (savedExpandedTags) {
-        expandedTags = new Set(JSON.parse(savedExpandedTags));
-        expandedTags.forEach(tagId => {
-            restoreTagState(tagId);
-        });
+        try {
+            expandedTags = new Set(JSON.parse(savedExpandedTags));
+            expandedTags.forEach(tagId => {
+                restoreTagState(tagId);
+            });
+        } catch (e) {
+            console.warn('Error parsing saved expanded tags:', e);
+            expandedTags = new Set();
+        }
     }
 
-    // Если есть активный тег, раскрываем его родительскую группу
-    const activeTag = document.querySelector('.tag-item.child.active');
-    if (activeTag) {
-        const parentContainer = activeTag.closest('.tag-children');
+    // Если есть активный дочерний тег, раскрываем его родительскую группу
+    const activeChildTag = document.querySelector('.tag-item.child.active');
+    if (activeChildTag) {
+        const parentContainer = activeChildTag.closest('.tag-children');
         if (parentContainer) {
             const tagId = parentContainer.id.replace('children-', '');
             expandTag(tagId);
         }
     }
     
-    // На десктопе оставляем боковую панель открытой по умолчанию
-    if (window.innerWidth > 768) {
-        sidebarOpen = true;
-    } else {
-        // На мобильных закрыта по умолчанию
-        sidebarOpen = false;
-        document.getElementById('catalogSidebar').classList.add('hidden');
-        document.getElementById('mainContent').classList.add('sidebar-closed');
-        document.getElementById('sidebarToggle').classList.add('closed');
-        document.getElementById('sidebarToggle').querySelector('i').className = 'fas fa-chevron-right';
-    }
+    // Применяем сохраненное состояние боковой панели БЕЗ анимации
+    applySidebarStateInstant();
     
     // AJAX forms
     setupAjaxForms();
 });
 
+// Сохранение состояния боковой панели
+function saveSidebarState() {
+    try {
+        localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen));
+    } catch (e) {
+        console.warn('Error saving sidebar state:', e);
+    }
+}
+
+// Применение состояния боковой панели БЕЗ анимации (для загрузки страницы)
+function applySidebarStateInstant() {
+    const sidebar = document.getElementById('catalogSidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    // Временно отключаем CSS transitions
+    sidebar.style.transition = 'none';
+    mainContent.style.transition = 'none';
+    toggleBtn.style.transition = 'none';
+    
+    if (window.innerWidth > 768) {
+        // Desktop behavior
+        if (sidebarOpen) {
+            sidebar.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-closed');
+            toggleBtn.classList.remove('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-left';
+        } else {
+            sidebar.classList.add('hidden');
+            mainContent.classList.add('sidebar-closed');
+            toggleBtn.classList.add('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        }
+        // На десктопе убираем мобильные классы
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+    } else {
+        // Mobile behavior - всегда закрыта по умолчанию
+        sidebar.classList.add('hidden');
+        mainContent.classList.add('sidebar-closed');
+        toggleBtn.classList.add('closed');
+        toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        overlay.classList.remove('active');
+        sidebar.classList.remove('mobile-open');
+        sidebarOpen = false; // На мобильных всегда закрыта при загрузке
+    }
+    
+    // Возвращаем CSS transitions через небольшую задержку
+    setTimeout(() => {
+        sidebar.style.transition = '';
+        mainContent.style.transition = '';
+        toggleBtn.style.transition = '';
+    }, 50);
+}
+
+// Применение состояния боковой панели С анимацией (для изменения размера окна)
+function applySidebarStateAnimated() {
+    const sidebar = document.getElementById('catalogSidebar');
+    const mainContent = document.getElementById('mainContent');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (window.innerWidth > 768) {
+        // Desktop behavior
+        if (sidebarOpen) {
+            sidebar.classList.remove('hidden');
+            mainContent.classList.remove('sidebar-closed');
+            toggleBtn.classList.remove('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-left';
+        } else {
+            sidebar.classList.add('hidden');
+            mainContent.classList.add('sidebar-closed');
+            toggleBtn.classList.add('closed');
+            toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        }
+        // На десктопе убираем мобильные классы
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+    } else {
+        // Mobile behavior - всегда закрыта по умолчанию
+        sidebar.classList.add('hidden');
+        mainContent.classList.add('sidebar-closed');
+        toggleBtn.classList.add('closed');
+        toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        overlay.classList.remove('active');
+        sidebar.classList.remove('mobile-open');
+        sidebarOpen = false; // На мобильных всегда закрыта при загрузке
+    }
+}
+
 // Сохранение состояния тегов в localStorage
 function saveTagState() {
-    localStorage.setItem('expandedTags', JSON.stringify([...expandedTags]));
+    try {
+        localStorage.setItem('expandedTags', JSON.stringify([...expandedTags]));
+    } catch (e) {
+        console.warn('Error saving expanded tags:', e);
+    }
 }
 
 // Восстановление состояния тега
@@ -939,14 +1039,14 @@ function restoreTagState(tagId) {
 
 // Раскрытие тега
 function expandTag(tagId) {
-    expandedTags.add(tagId);
+    expandedTags.add(tagId.toString());
     restoreTagState(tagId);
     saveTagState();
 }
 
 // Свертывание тега
 function collapseTag(tagId) {
-    expandedTags.delete(tagId);
+    expandedTags.delete(tagId.toString());
     const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
     const childrenContainer = document.getElementById(`children-${tagId}`);
     
@@ -989,6 +1089,9 @@ function toggleSidebar() {
             overlay.classList.remove('active');
         }
     }
+    
+    // Сохраняем состояние боковой панели
+    saveSidebarState();
 }
 
 // Close sidebar on mobile
@@ -997,6 +1100,8 @@ function closeSidebarMobile() {
         sidebarOpen = false;
         document.getElementById('catalogSidebar').classList.remove('mobile-open');
         document.getElementById('sidebarOverlay').classList.remove('active');
+        // Сохраняем состояние при закрытии на мобильных
+        saveSidebarState();
     }
 }
 
@@ -1021,38 +1126,17 @@ function toggleTagChildren(tagId, event) {
 
 // Handle window resize
 window.addEventListener('resize', function() {
-    const overlay = document.getElementById('sidebarOverlay');
-    const sidebar = document.getElementById('catalogSidebar');
-    const mainContent = document.getElementById('mainContent');
-    const toggleBtn = document.getElementById('sidebarToggle');
+    const wasDesktop = window.innerWidth > 768;
     
-    if (window.innerWidth > 768) {
-        // Desktop: remove mobile classes, restore desktop state
-        overlay.classList.remove('active');
-        sidebar.classList.remove('mobile-open');
+    // Небольшая задержка для корректной обработки изменения размера
+    setTimeout(() => {
+        const isDesktop = window.innerWidth > 768;
         
-        // Restore desktop sidebar state
-        if (sidebarOpen) {
-            sidebar.classList.remove('hidden');
-            mainContent.classList.remove('sidebar-closed');
-            toggleBtn.classList.remove('closed');
-            toggleBtn.querySelector('i').className = 'fas fa-chevron-left';
-        } else {
-            sidebar.classList.add('hidden');
-            mainContent.classList.add('sidebar-closed');
-            toggleBtn.classList.add('closed');
-            toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
+        if (wasDesktop !== isDesktop) {
+            // Размер экрана изменился между desktop/mobile - используем анимированную версию
+            applySidebarStateAnimated();
         }
-    } else {
-        // Mobile: ensure proper mobile state
-        if (sidebarOpen) {
-            overlay.classList.add('active');
-            sidebar.classList.add('mobile-open');
-        } else {
-            overlay.classList.remove('active');
-            sidebar.classList.remove('mobile-open');
-        }
-    }
+    }, 100);
 });
 
 // Setup AJAX forms
