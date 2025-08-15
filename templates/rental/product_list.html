@@ -4,6 +4,7 @@
 {% block title %}Каталог товаров - Аренда оборудования{% endblock %}
 
 {% block content %}
+<!-- Существующие стили остаются без изменений -->
 <style>
     :root {
         --sidebar-width: 320px;
@@ -232,6 +233,8 @@
         opacity: 1;
     }
 
+    /* НОВЫЕ СТИЛИ ДЛЯ УМНОГО ПОИСКА */
+    
     /* Search section */
     .search-form {
         background: var(--card-color);
@@ -240,6 +243,123 @@
         box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         margin-bottom: 2rem;
         border: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    /* Умный поиск активен */
+    .search-form.smart-search-active {
+        border-color: var(--blue);
+        box-shadow: 0 4px 20px rgba(88, 166, 255, 0.3);
+    }
+
+    .search-form.smart-search-active::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
+        background: linear-gradient(45deg, var(--blue), var(--purple), var(--blue));
+        background-size: 200% 200%;
+        border-radius: 15px;
+        z-index: -1;
+        animation: smartSearchGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes smartSearchGlow {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    .search-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-title {
+        display: flex;
+        align-items: center;
+        font-weight: 700;
+        color: var(--text-color);
+        margin: 0;
+    }
+
+    .search-title.smart-active {
+        color: var(--blue);
+    }
+
+    .search-title i {
+        margin-right: 0.5rem;
+        font-size: 1.2rem;
+    }
+
+    .search-toggle {
+        position: relative;
+    }
+
+    .search-toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+
+    .search-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .search-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--surface-color);
+        transition: 0.4s;
+        border-radius: 30px;
+        border: 2px solid var(--border-color);
+    }
+
+    .search-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 2px;
+        bottom: 2px;
+        background-color: var(--text-secondary);
+        transition: 0.4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .search-toggle-slider {
+        background: linear-gradient(45deg, var(--blue), var(--purple));
+        border-color: var(--blue);
+    }
+
+    input:checked + .search-toggle-slider:before {
+        transform: translateX(30px);
+        background-color: white;
+    }
+
+    .search-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        transition: color 0.3s ease;
+    }
+
+    .search-toggle-label.active {
+        color: var(--blue);
+        font-weight: 600;
     }
 
     .search-input {
@@ -250,6 +370,7 @@
         transition: all 0.3s ease;
         background: var(--surface-color);
         color: var(--text-color);
+        position: relative;
     }
 
     .search-input:focus {
@@ -257,6 +378,11 @@
         box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25);
         outline: none;
         background: var(--surface-color);
+    }
+
+    .search-input.smart-search {
+        border-color: var(--blue);
+        background: linear-gradient(45deg, rgba(88, 166, 255, 0.05), rgba(165, 165, 255, 0.05));
     }
 
     .search-btn {
@@ -268,6 +394,8 @@
         padding: 0.75rem 2rem;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(88, 166, 255, 0.3);
+        position: relative;
+        overflow: hidden;
     }
 
     .search-btn:hover {
@@ -277,7 +405,88 @@
         background: linear-gradient(45deg, #2980b9, #1f5f8b);
     }
 
-    /* Results info */
+    .search-btn.smart-search {
+        background: linear-gradient(45deg, var(--purple), var(--blue));
+        animation: smartButtonPulse 2s ease-in-out infinite;
+    }
+
+    .search-btn.smart-search:hover {
+        background: linear-gradient(45deg, var(--blue), var(--purple));
+    }
+
+    @keyframes smartButtonPulse {
+        0%, 100% { box-shadow: 0 4px 15px rgba(88, 166, 255, 0.3); }
+        50% { box-shadow: 0 4px 25px rgba(165, 165, 255, 0.5); }
+    }
+
+    .search-btn:disabled {
+        background: var(--surface-color);
+        color: var(--text-secondary);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        animation: none;
+    }
+
+    .search-loading {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--blue);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .search-loading.active {
+        display: flex;
+    }
+
+    .search-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid var(--blue);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .smart-search-info {
+        background: linear-gradient(45deg, rgba(88, 166, 255, 0.1), rgba(165, 165, 255, 0.1));
+        border: 1px solid rgba(88, 166, 255, 0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        color: var(--blue-light);
+        font-size: 0.9rem;
+        display: none;
+    }
+
+    .smart-search-info.active {
+        display: block;
+        animation: fadeInUp 0.5s ease;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .smart-search-icon {
+        margin-right: 0.5rem;
+        animation: smartIconGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes smartIconGlow {
+        0%, 100% { color: var(--blue); }
+        50% { color: var(--purple); }
+    }
+
+    /* Results info with search type indicator */
     .results-info {
         background: rgba(88, 166, 255, 0.1);
         border: 1px solid rgba(88, 166, 255, 0.3);
@@ -285,9 +494,47 @@
         color: var(--blue-light);
         padding: 1rem 1.5rem;
         margin-bottom: 2rem;
+        position: relative;
     }
 
-    /* Products grid */
+    .results-info.smart-results {
+        background: linear-gradient(45deg, rgba(88, 166, 255, 0.1), rgba(165, 165, 255, 0.1));
+        border-color: rgba(165, 165, 255, 0.4);
+    }
+
+    .results-info.smart-results::before {
+        content: '🤖';
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.2rem;
+        animation: smartResultsGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes smartResultsGlow {
+        0%, 100% { opacity: 0.7; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .search-type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background: rgba(88, 166, 255, 0.2);
+        color: var(--blue);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .search-type-badge.smart {
+        background: linear-gradient(45deg, rgba(88, 166, 255, 0.2), rgba(165, 165, 255, 0.2));
+        color: var(--purple);
+    }
+
+    /* Products grid - остается как было */
     .products-grid {
         display: grid;
         gap: 1.5rem;
@@ -590,11 +837,6 @@
         color: white;
     }
 
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
     /* Mobile Styles */
     @media (max-width: 768px) {
         .catalog-layout {
@@ -622,6 +864,12 @@
 
         .search-form {
             padding: 1rem;
+        }
+
+        .search-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
         }
 
         .search-input {
@@ -653,10 +901,14 @@
             grid-template-columns: 1fr;
             gap: 1rem;
         }
+
+        .smart-search-info {
+            font-size: 0.8rem;
+            padding: 0.75rem;
+        }
     }
 </style>
 
-<!-- Layout Container -->
 <div class="catalog-layout">
     <!-- Toggle Button -->
     <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">
@@ -672,7 +924,6 @@
         <div class="catalog-header">
             <div>
                 <h2 class="catalog-title mb-1">
-                    <i class="fas fa-th-large me-2"></i>
                     Каталог товаров
                 </h2>
                 <p class="mb-0 opacity-75">Выберите категорию</p>
@@ -726,28 +977,44 @@
 
     <!-- Main Content -->
     <div class="main-catalog-content" id="mainContent">
-        <!-- Search and Filters -->
-        <div class="search-form">
-            <form method="get" class="row g-3 align-items-end">
+        <!-- Unified Smart Search Form -->
+        <div class="search-form" id="searchForm">
+            <div class="search-header">
+                <h3 class="search-title" id="searchTitle">
+                    Поиск
+                </h3>
+            </div>
+            
+            <form method="get" class="row g-3 align-items-end" id="searchFormElement">
                 <div class="col-md-8">
-                    <label class="form-label fw-bold text-primary mb-3">
-                        <i class="fas fa-search me-2"></i>
-                        Поиск товаров
-                    </label>
-                    <input type="text" name="search" class="form-control search-input" 
-                           placeholder="Введите название товара, артикул или описание..." 
-                           value="{{ search_query }}">
-                    <!-- Сохраняем текущий фильтр тега -->
+                    <input type="text" name="search" 
+                           class="form-control search-input" 
+                           placeholder="Опишите что ищете: 'освещение', 'камера', 'посуда'..." 
+                           value="{{ search_query }}" id="searchInput">
                     {% if request.GET.tag %}
                         <input type="hidden" name="tag" value="{{ request.GET.tag }}">
                     {% endif %}
                 </div>
                 <div class="col-md-4">
-                    <button type="submit" class="btn search-btn w-100">
-                        <i class="fas fa-search me-2"></i>Найти товары
+                    <button type="submit" class="btn search-btn w-100" id="searchButton">
+                        <i class="fas fa-brain me-2" id="searchButtonIcon"></i>
+                        Найти
                     </button>
                 </div>
             </form>
+            
+            <!-- Loading indicator -->
+            <div class="search-loading" id="searchLoading">
+                <div class="search-spinner"></div>
+                <span>AI анализирует ваш запрос...</span>
+            </div>
+            
+            <!-- Smart search info -->
+            <div class="smart-search-info" id="smartSearchInfo">
+                <i class="fas fa-lightbulb me-2"></i>
+                <strong>Умный поиск всегда активен!</strong> Описывайте что ищете своими словами. 
+                Например: "сиденье" найдет стулья и кресла, "парта" найдет столы, "яркий" найдет лампы и светильники.
+            </div>
         </div>
 
         <!-- Search Results Info -->
@@ -756,8 +1023,8 @@
             <div class="d-flex align-items-center">
                 <i class="fas fa-info-circle me-3 fs-5"></i>
                 <div>
-                    <strong>Результаты поиска по запросу:</strong> "{{ search_query }}"
-                    <div class="small mt-1">Найдено товаров: {{ products.count }}</div>
+                    <strong>Результаты умного поиска по запросу:</strong> "{{ search_query }}"
+                    <div class="small mt-1">Найдено товаров: {{ products_count }}</div>
                 </div>
             </div>
         </div>
@@ -771,7 +1038,7 @@
                     <i class="fas fa-filter me-3 fs-5"></i>
                     <div>
                         <strong>Фильтр по категории:</strong> {{ selected_tag_obj.get_display_name }}
-                        <div class="small mt-1">Найдено товаров: {{ products.count }}</div>
+                        <div class="small mt-1">Найдено товаров: {{ products_count }}</div>
                     </div>
                 </div>
                 <a href="{% url 'rental:product_list' %}" class="btn btn-sm btn-outline-secondary">
@@ -798,7 +1065,7 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Status Badge with improved logic -->
+                    <!-- Status Badge -->
                     <div class="product-status {% if product.get_availability_status == 'out' %}status-out{% elif product.get_availability_status == 'low' %}status-low{% else %}status-available{% endif %}">
                         {% if product.get_availability_status == 'out' %}
                             <i class="fas fa-times-circle me-1"></i>Осталось: 0
@@ -835,7 +1102,7 @@
                         <i class="fas fa-hashtag me-1"></i>{{ product.article }}
                     </div>
                     <div class="product-price">
-                        {{ product.daily_price|format_price }} <br> сум<small class="text-muted">/день</small>
+                        {{ product.daily_price|format_price }} сум<small class="text-muted">/день</small>
                     </div>
                     
                     <!-- Actions -->
@@ -863,12 +1130,17 @@
             <!-- Empty State -->
             <div class="empty-state">
                 <div class="empty-icon">
-                    <i class="fas fa-search-minus"></i>
+                    <i class="fas fa-robot"></i>
                 </div>
                 <h3 class="empty-title">Товары не найдены</h3>
                 <p class="empty-description">
-                    К сожалению, по вашему запросу товары не найдены. 
-                    Попробуйте изменить параметры поиска или выберите другую категорию.
+                    {% if search_type == 'smart' or search_type == 'fallback' %}
+                        К сожалению, умный поиск не нашел товаров по вашему запросу. 
+                        Попробуйте переформулировать запрос или использовать другие ключевые слова.
+                    {% else %}
+                        К сожалению, товары не найдены. 
+                        Попробуйте изменить параметры поиска или выберите другую категорию.
+                    {% endif %}
                 </p>
                 <a href="{% url 'rental:product_list' %}" class="reset-btn">
                     <i class="fas fa-refresh me-2"></i>Показать все товары
@@ -882,20 +1154,19 @@
 <script>
 // Global variables
 let sidebarOpen = true;
-let expandedTags = new Set(); // Сохраняем состояние раскрытых тегов
+let expandedTags = new Set();
+let useSmartSearch = {{ use_smart_search|yesno:"true,false" }};
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Восстанавливаем состояние боковой панели из localStorage
+    // Existing initialization code...
     const savedSidebarState = localStorage.getItem('sidebarOpen');
     if (savedSidebarState !== null) {
         sidebarOpen = JSON.parse(savedSidebarState);
     } else {
-        // По умолчанию: на десктопе открыта, на мобильных закрыта
         sidebarOpen = window.innerWidth > 768;
     }
 
-    // Восстанавливаем состояние раскрытых тегов из localStorage
     const savedExpandedTags = localStorage.getItem('expandedTags');
     if (savedExpandedTags) {
         try {
@@ -909,7 +1180,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Если есть активный дочерний тег, раскрываем его родительскую группу
     const activeChildTag = document.querySelector('.tag-item.child.active');
     if (activeChildTag) {
         const parentContainer = activeChildTag.closest('.tag-children');
@@ -919,14 +1189,130 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Применяем сохраненное состояние боковой панели БЕЗ анимации
     applySidebarStateInstant();
-    
-    // AJAX forms
     setupAjaxForms();
+    
+    // Initialize smart search
+    initializeSmartSearch();
 });
 
-// Сохранение состояния боковой панели
+// Smart Search Functions
+function initializeSmartSearch() {
+    const smartToggle = document.getElementById('smartSearchToggle');
+    const searchForm = document.getElementById('searchFormElement');
+    
+    // Load saved preference
+    const savedSmartSearch = localStorage.getItem('useSmartSearch');
+    if (savedSmartSearch !== null) {
+        useSmartSearch = JSON.parse(savedSmartSearch);
+        smartToggle.checked = useSmartSearch;
+        updateSearchInterface();
+    }
+    
+    // Toggle event listener
+    smartToggle.addEventListener('change', function() {
+        useSmartSearch = this.checked;
+        localStorage.setItem('useSmartSearch', JSON.stringify(useSmartSearch));
+        updateSearchInterface();
+        
+        // Update hidden form field
+        document.getElementById('smartSearchInput').value = useSmartSearch ? '1' : '0';
+    });
+    
+    // Form submission with loading state
+    searchForm.addEventListener('submit', function(e) {
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const searchLoading = document.getElementById('searchLoading');
+        
+        // Only show loading for non-empty queries
+        if (searchInput.value.trim()) {
+            searchButton.disabled = true;
+            searchLoading.classList.add('active');
+            
+            // Add loading class to button
+            searchButton.classList.add('btn-loading');
+        }
+    });
+    
+    // Check smart search availability
+    checkSmartSearchAvailability();
+}
+
+function updateSearchInterface() {
+    const searchForm = document.getElementById('searchForm');
+    const searchTitle = document.getElementById('searchTitle');
+    const searchIcon = document.getElementById('searchIcon');
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchButtonIcon = document.getElementById('searchButtonIcon');
+    const searchToggleLabel = document.getElementById('searchToggleLabel');
+    const smartSearchInfo = document.getElementById('smartSearchInfo');
+    
+    if (useSmartSearch) {
+        // Smart search active
+        searchForm.classList.add('smart-search-active');
+        searchTitle.classList.add('smart-active');
+        searchTitle.innerHTML = '<i class="fas fa-brain smart-search-icon" id="searchIcon"></i>Умный поиск';
+        searchIcon.className = 'fas fa-brain smart-search-icon';
+        searchInput.classList.add('smart-search');
+        searchInput.placeholder = 'Опишите что ищете: "освещение для съемки", "камера для видео", "микрофон"...';
+        searchButton.classList.add('smart-search');
+        searchButton.innerHTML = '<i class="fas fa-brain me-2" id="searchButtonIcon"></i>Найти умно';
+        searchButtonIcon.className = 'fas fa-brain me-2';
+        searchToggleLabel.classList.add('active');
+        smartSearchInfo.classList.add('active');
+    } else {
+        // Regular search active
+        searchForm.classList.remove('smart-search-active');
+        searchTitle.classList.remove('smart-active');
+        searchTitle.innerHTML = '<i class="fas fa-search" id="searchIcon"></i>Обычный поиск';
+        searchIcon.className = 'fas fa-search';
+        searchInput.classList.remove('smart-search');
+        searchInput.placeholder = 'Введите название товара, артикул или описание...';
+        searchButton.classList.remove('smart-search');
+        searchButton.innerHTML = '<i class="fas fa-search me-2" id="searchButtonIcon"></i>Найти товары';
+        searchButtonIcon.className = 'fas fa-search me-2';
+        searchToggleLabel.classList.remove('active');
+        smartSearchInfo.classList.remove('active');
+    }
+}
+
+function toggleSearchType(enableSmart) {
+    const smartToggle = document.getElementById('smartSearchToggle');
+    useSmartSearch = enableSmart;
+    smartToggle.checked = enableSmart;
+    localStorage.setItem('useSmartSearch', JSON.stringify(useSmartSearch));
+    document.getElementById('smartSearchInput').value = enableSmart ? '1' : '0';
+    updateSearchInterface();
+}
+
+function checkSmartSearchAvailability() {
+    fetch('{% url "rental:smart_search_status" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.available) {
+                // Smart search not available
+                const smartToggle = document.getElementById('smartSearchToggle');
+                const searchToggleLabel = document.getElementById('searchToggleLabel');
+                
+                smartToggle.disabled = true;
+                searchToggleLabel.style.opacity = '0.5';
+                searchToggleLabel.title = 'Умный поиск недоступен. Проверьте настройки API.';
+                
+                if (useSmartSearch) {
+                    // Force switch to regular search
+                    toggleSearchType(false);
+                    showMessage('Умный поиск временно недоступен', 'warning');
+                }
+            }
+        })
+        .catch(error => {
+            console.warn('Error checking smart search availability:', error);
+        });
+}
+
+// Existing sidebar functions remain unchanged...
 function saveSidebarState() {
     try {
         localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen));
@@ -935,20 +1321,17 @@ function saveSidebarState() {
     }
 }
 
-// Применение состояния боковой панели БЕЗ анимации (для загрузки страницы)
 function applySidebarStateInstant() {
     const sidebar = document.getElementById('catalogSidebar');
     const mainContent = document.getElementById('mainContent');
     const toggleBtn = document.getElementById('sidebarToggle');
     const overlay = document.getElementById('sidebarOverlay');
     
-    // Временно отключаем CSS transitions
     sidebar.style.transition = 'none';
     mainContent.style.transition = 'none';
     toggleBtn.style.transition = 'none';
     
     if (window.innerWidth > 768) {
-        // Desktop behavior
         if (sidebarOpen) {
             sidebar.classList.remove('hidden');
             mainContent.classList.remove('sidebar-closed');
@@ -960,21 +1343,18 @@ function applySidebarStateInstant() {
             toggleBtn.classList.add('closed');
             toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         }
-        // На десктопе убираем мобильные классы
         sidebar.classList.remove('mobile-open');
         overlay.classList.remove('active');
     } else {
-        // Mobile behavior - всегда закрыта по умолчанию
         sidebar.classList.add('hidden');
         mainContent.classList.add('sidebar-closed');
         toggleBtn.classList.add('closed');
         toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         overlay.classList.remove('active');
         sidebar.classList.remove('mobile-open');
-        sidebarOpen = false; // На мобильных всегда закрыта при загрузке
+        sidebarOpen = false;
     }
     
-    // Возвращаем CSS transitions через небольшую задержку
     setTimeout(() => {
         sidebar.style.transition = '';
         mainContent.style.transition = '';
@@ -982,7 +1362,6 @@ function applySidebarStateInstant() {
     }, 50);
 }
 
-// Применение состояния боковой панели С анимацией (для изменения размера окна)
 function applySidebarStateAnimated() {
     const sidebar = document.getElementById('catalogSidebar');
     const mainContent = document.getElementById('mainContent');
@@ -990,7 +1369,6 @@ function applySidebarStateAnimated() {
     const overlay = document.getElementById('sidebarOverlay');
     
     if (window.innerWidth > 768) {
-        // Desktop behavior
         if (sidebarOpen) {
             sidebar.classList.remove('hidden');
             mainContent.classList.remove('sidebar-closed');
@@ -1002,22 +1380,19 @@ function applySidebarStateAnimated() {
             toggleBtn.classList.add('closed');
             toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         }
-        // На десктопе убираем мобильные классы
         sidebar.classList.remove('mobile-open');
         overlay.classList.remove('active');
     } else {
-        // Mobile behavior - всегда закрыта по умолчанию
         sidebar.classList.add('hidden');
         mainContent.classList.add('sidebar-closed');
         toggleBtn.classList.add('closed');
         toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         overlay.classList.remove('active');
         sidebar.classList.remove('mobile-open');
-        sidebarOpen = false; // На мобильных всегда закрыта при загрузке
+        sidebarOpen = false;
     }
 }
 
-// Сохранение состояния тегов в localStorage
 function saveTagState() {
     try {
         localStorage.setItem('expandedTags', JSON.stringify([...expandedTags]));
@@ -1026,7 +1401,6 @@ function saveTagState() {
     }
 }
 
-// Восстановление состояния тега
 function restoreTagState(tagId) {
     const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
     const childrenContainer = document.getElementById(`children-${tagId}`);
@@ -1037,14 +1411,12 @@ function restoreTagState(tagId) {
     }
 }
 
-// Раскрытие тега
 function expandTag(tagId) {
     expandedTags.add(tagId.toString());
     restoreTagState(tagId);
     saveTagState();
 }
 
-// Свертывание тега
 function collapseTag(tagId) {
     expandedTags.delete(tagId.toString());
     const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
@@ -1057,7 +1429,6 @@ function collapseTag(tagId) {
     saveTagState();
 }
 
-// Toggle sidebar
 function toggleSidebar() {
     const sidebar = document.getElementById('catalogSidebar');
     const mainContent = document.getElementById('mainContent');
@@ -1067,7 +1438,6 @@ function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
     
     if (window.innerWidth > 768) {
-        // Desktop behavior
         if (sidebarOpen) {
             sidebar.classList.remove('hidden');
             mainContent.classList.remove('sidebar-closed');
@@ -1080,7 +1450,6 @@ function toggleSidebar() {
             toggleBtn.querySelector('i').className = 'fas fa-chevron-right';
         }
     } else {
-        // Mobile behavior
         if (sidebarOpen) {
             sidebar.classList.add('mobile-open');
             overlay.classList.add('active');
@@ -1090,22 +1459,18 @@ function toggleSidebar() {
         }
     }
     
-    // Сохраняем состояние боковой панели
     saveSidebarState();
 }
 
-// Close sidebar on mobile
 function closeSidebarMobile() {
     if (window.innerWidth <= 768) {
         sidebarOpen = false;
         document.getElementById('catalogSidebar').classList.remove('mobile-open');
         document.getElementById('sidebarOverlay').classList.remove('active');
-        // Сохраняем состояние при закрытии на мобильных
         saveSidebarState();
     }
 }
 
-// Toggle tag children with state preservation
 function toggleTagChildren(tagId, event) {
     event.preventDefault();
     event.stopPropagation();
@@ -1124,22 +1489,18 @@ function toggleTagChildren(tagId, event) {
     }
 }
 
-// Handle window resize
 window.addEventListener('resize', function() {
     const wasDesktop = window.innerWidth > 768;
     
-    // Небольшая задержка для корректной обработки изменения размера
     setTimeout(() => {
         const isDesktop = window.innerWidth > 768;
         
         if (wasDesktop !== isDesktop) {
-            // Размер экрана изменился между desktop/mobile - используем анимированную версию
             applySidebarStateAnimated();
         }
     }, 100);
 });
 
-// Setup AJAX forms
 function setupAjaxForms() {
     document.querySelectorAll('.add-to-cart-form').forEach(function(form) {
         form.addEventListener('submit', function(e) {
@@ -1150,11 +1511,9 @@ function setupAjaxForms() {
             const submitButton = this.querySelector('button[type="submit"]');
             const originalHTML = submitButton.innerHTML;
             
-            // Show loading state
             submitButton.disabled = true;
             submitButton.classList.add('btn-loading');
             
-            // Send AJAX request
             fetch(this.action, {
                 method: 'POST',
                 body: formData,
@@ -1164,17 +1523,12 @@ function setupAjaxForms() {
             })
             .then(response => {
                 if (response.ok) {
-                    // Success
                     submitButton.innerHTML = '<i class="fas fa-check me-1"></i>Добавлено!';
                     submitButton.style.background = 'linear-gradient(45deg, #28a745, #20c997)';
                     
-                    // Show success message
                     showMessage('Товар успешно добавлен в корзину!', 'success');
-                    
-                    // Update cart counter
                     updateCartCounter();
                     
-                    // Reset button after delay
                     setTimeout(() => {
                         submitButton.innerHTML = originalHTML;
                         submitButton.style.background = '';
@@ -1188,13 +1542,11 @@ function setupAjaxForms() {
             .catch(error => {
                 console.error('Error:', error);
                 
-                // Error state
                 submitButton.innerHTML = '<i class="fas fa-times me-1"></i>Ошибка';
                 submitButton.style.background = 'linear-gradient(45deg, #dc3545, #c82333)';
                 
                 showMessage('Ошибка при добавлении товара в корзину', 'error');
                 
-                // Reset button after delay
                 setTimeout(() => {
                     submitButton.innerHTML = originalHTML;
                     submitButton.style.background = '';
@@ -1206,7 +1558,6 @@ function setupAjaxForms() {
     });
 }
 
-// Update cart counter
 function updateCartCounter() {
     fetch('{% url "rental:cart_count_api" %}')
     .then(response => response.json())
@@ -1224,15 +1575,16 @@ function updateCartCounter() {
     .catch(error => console.error('Error updating cart counter:', error));
 }
 
-// Show messages
 function showMessage(message, type = 'success') {
-    // Create message element
     const messageEl = document.createElement('div');
-    messageEl.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    const alertClass = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'danger');
+    const iconClass = type === 'success' ? 'check-circle' : (type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle');
+    
+    messageEl.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed`;
     messageEl.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 300px; animation: slideInRight 0.3s ease;';
     messageEl.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+            <i class="fas fa-${iconClass} me-2"></i>
             <span>${message}</span>
             <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
         </div>
@@ -1240,7 +1592,6 @@ function showMessage(message, type = 'success') {
     
     document.body.appendChild(messageEl);
     
-    // Auto remove after 5 seconds
     setTimeout(() => {
         if (messageEl.parentNode) {
             messageEl.style.animation = 'slideOutRight 0.3s ease forwards';

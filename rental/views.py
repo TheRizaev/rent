@@ -20,17 +20,23 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
 import os
-
+from .services import smart_search_service
 from django.db.models import Q, Case, When, IntegerField, Value, F
 from django.db.models.functions import Length
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def preview_page(request):
     return render(request, 'rental/preview.html')
 
 def product_list(request):
-    products = Product.objects.all()
+    # Получаем параметры поиска и фильтрации
+    search_query = request.GET.get('search', '').strip()
+    tag_filter = request.GET.get('tag', '')
     
+    # Сортировка тегов
     sort_preference = request.session.get('tag_sort_preference', 'order')
     
     if sort_preference == 'alphabetical':
@@ -40,28 +46,68 @@ def product_list(request):
     else:  # order
         root_tags = Tag.objects.filter(parent=None).order_by('order', 'name')
     
-    search_query = request.GET.get('search', '')
-    tag_filter = request.GET.get('tag', '')
-    
+    # Инициализация переменных
     selected_tag = None
     selected_tag_children = []
+    products = Product.objects.all()
+    search_type = 'all'  # all, smart, tag, smart_tag
     
+    # Обработка поиска - ВСЕГДА используем умный поиск
     if search_query:
-        search_query = search_query.strip().lower()
-        products = products.filter(
-            Q(name__contains=search_query) | 
-            Q(article__icontains=search_query) |
-            Q(description__contains=search_query)
-        )
+        try:
+            logger.info(f"Выполняется умный поиск для: '{search_query}'")
+            smart_products = smart_search_service.smart_search(search_query)
+            
+            if smart_products:
+                # Преобразуем в список для совместимости с остальным кодом
+                products = smart_products
+                search_type = 'smart'
+                logger.info(f"Умный поиск вернул {len(products)} товаров")
+            else:
+                products = []
+                search_type = 'smart'
+                logger.info("Умный поиск не нашел товаров")
+                
+        except Exception as e:
+            logger.error(f"Ошибка умного поиска: {e}")
+            # Fallback к улучшенному обычному поиску
+            expanded_query = smart_search_service.expand_search_query(search_query)
+            products = Product.objects.filter(
+                Q(name__icontains=search_query) | 
+                Q(article__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(name__icontains=expanded_query) |
+                Q(description__icontains=expanded_query)
+            ).distinct().order_by('name')
+            search_type = 'fallback'
+            messages.warning(request, 'Умный поиск временно недоступен, используется расширенный поиск.')
     
+    # Обработка фильтрации по тегам
     if tag_filter:
         try:
             selected_tag = Tag.objects.get(id=tag_filter)
             descendant_tags = selected_tag.get_descendants()
             all_tags = [selected_tag] + descendant_tags
-            products = products.filter(tags__in=all_tags).distinct()
             
-            # Получаем дочерние теги для отображения с правильной сортировкой
+            if search_query:
+                # Если был умный поиск, фильтруем результаты по тегам
+                if isinstance(products, list):
+                    # Если это список из умного поиска
+                    filtered_products = []
+                    for product in products:
+                        if any(tag in product.tags.all() for tag in all_tags):
+                            filtered_products.append(product)
+                    products = filtered_products
+                else:
+                    # Если это QuerySet
+                    products = products.filter(tags__in=all_tags).distinct()
+            else:
+                # Обычная фильтрация по тегам
+                products = Product.objects.filter(tags__in=all_tags).distinct().order_by('name')
+            
+            search_type = 'tag' if not search_query else f'{search_type}_tag'
+            
+            # Получаем дочерние теги для отображения
             if sort_preference == 'alphabetical':
                 selected_tag_children = selected_tag.get_children().order_by('name')
             elif sort_preference == 'creation_date':
@@ -71,7 +117,13 @@ def product_list(request):
         except Tag.DoesNotExist:
             pass
     
-    products = products.order_by('name')
+    # Если нет поиска и фильтров, сортируем по имени
+    if not search_query and not tag_filter:
+        products = Product.objects.all().order_by('name')
+        search_type = 'all'
+    
+    # Подсчет результатов
+    products_count = len(products) if isinstance(products, list) else products.count()
     
     context = {
         'products': products,
@@ -79,8 +131,11 @@ def product_list(request):
         'selected_tag': tag_filter,
         'selected_tag_obj': selected_tag,
         'selected_tag_children': selected_tag_children,
-        'search_query': search_query
+        'search_query': search_query,
+        'search_type': search_type,
+        'products_count': products_count,
     }
+    
     return render(request, 'rental/product_list.html', context)
 
 
@@ -785,3 +840,49 @@ def update_cart_days(request):
         messages.error(request, 'Товар не найден в корзине')
     
     return redirect('rental:cart')
+
+# API endpoint для переключения типа поиска
+def toggle_search_type(request):
+    """
+    API endpoint для переключения между умным и обычным поиском
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            use_smart_search = data.get('use_smart_search', True)
+            
+            # Сохраняем предпочтение в сессии
+            request.session['use_smart_search'] = use_smart_search
+            
+            return JsonResponse({
+                'success': True,
+                'use_smart_search': use_smart_search
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Метод не поддерживается'})
+
+
+def smart_search_status(request):
+    """
+    API для проверки доступности ChatGPT API
+    """
+    try:
+        # Проверяем, настроен ли API ключ
+        from django.conf import settings
+        api_key_configured = bool(getattr(settings, 'OPENAI_API_KEY', None))
+        
+        return JsonResponse({
+            'available': api_key_configured and smart_search_service.api_available,
+            'configured': api_key_configured
+        })
+    except Exception as e:
+        return JsonResponse({
+            'available': False,
+            'configured': False,
+            'error': str(e)
+        })
