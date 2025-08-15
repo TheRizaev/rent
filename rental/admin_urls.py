@@ -34,6 +34,9 @@ urlpatterns = [
     path('tags/', admin_views.tag_management, name='tag_management'),
     path('api/tags/children/', admin_views.get_tag_children, name='get_tag_children'),
     path('api/tags/structure/', admin_views.tag_structure_api, name='tag_structure_api'),
+    
+    # НОВОЕ: API для автозаполнения названий товаров
+    path('api/product-name-autocomplete/', admin_views.product_name_autocomplete, name='product_name_autocomplete'),
 
     # Штрих-коды
     path('barcode-scanner/', admin_views.barcode_scanner, name='barcode_scanner'),

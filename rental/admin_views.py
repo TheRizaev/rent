@@ -245,6 +245,10 @@ def add_storage(request):
 
 @user_passes_test(is_admin)
 def product_management(request):
+    # ИЗМЕНЕНИЕ 1: Добавляем сортировку по дате создания (последние сначала) и группировку по категориям
+    sort_by = request.GET.get('sort', 'date_desc')  # По умолчанию - сначала новые
+    group_by_category = request.GET.get('group_by_category', 'false') == 'true'
+    
     products = Product.objects.all()
     
     search_query = request.GET.get('search', '')
@@ -256,8 +260,43 @@ def product_management(request):
             Q(description__icontains=search_query)
         )
     
+    # Применяем сортировку
+    if sort_by == 'date_desc':
+        products = products.order_by('-created_at')
+    elif sort_by == 'date_asc':
+        products = products.order_by('created_at')
+    elif sort_by == 'name_asc':
+        products = products.order_by('name')
+    elif sort_by == 'name_desc':
+        products = products.order_by('-name')
+    
+    # Группировка по категориям
+    products_by_category = {}
+    if group_by_category:
+        # Получаем все товары с их тегами
+        for product in products:
+            # Получаем корневые теги товара
+            root_tags = []
+            for tag in product.tags.all():
+                root_tag = tag.get_root()
+                if root_tag not in root_tags:
+                    root_tags.append(root_tag)
+            
+            if not root_tags:
+                # Товары без категорий
+                category_name = "Без категории"
+            else:
+                category_name = ", ".join([tag.get_display_name() for tag in root_tags])
+            
+            if category_name not in products_by_category:
+                products_by_category[category_name] = []
+            products_by_category[category_name].append(product)
+    
     context = {
         'products': products,
+        'products_by_category': products_by_category,
+        'group_by_category': group_by_category,
+        'sort_by': sort_by,
         'search_query': search_query,
     }
     return render(request, 'rental/admin/product_management.html', context)
@@ -622,6 +661,37 @@ def tag_structure_api(request):
     
     tree = build_json_tree()
     return JsonResponse({'tree': tree})
+
+# НОВАЯ ФУНКЦИЯ: API для автозаполнения названий товаров
+@user_passes_test(is_admin)
+def product_name_autocomplete(request):
+    """API для автозаполнения названий товаров"""
+    query = request.GET.get('q', '').strip().lower()
+    
+    if len(query) < 2:
+        return JsonResponse({'suggestions': []})
+    
+    # Получаем все уникальные названия товаров, которые содержат запрос
+    existing_names = Product.objects.filter(
+        name__icontains=query
+    ).values_list('name', flat=True).distinct()
+    
+    # Также ищем по отдельным словам в названиях
+    words_suggestions = []
+    all_names = Product.objects.values_list('name', flat=True)
+    
+    for name in all_names:
+        words = name.lower().split()
+        for word in words:
+            if word.startswith(query) and len(word) > 2:
+                words_suggestions.append(word.capitalize())
+    
+    # Объединяем и убираем дубли
+    suggestions = list(set(list(existing_names) + words_suggestions))
+    suggestions = [name.capitalize() for name in suggestions]
+    suggestions.sort()
+    
+    return JsonResponse({'suggestions': suggestions[:10]})  # Максимум 10 предложений
 
 @user_passes_test(is_admin)
 def edit_storage(request, storage_id):
