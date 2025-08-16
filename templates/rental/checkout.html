@@ -93,6 +93,23 @@
                                 <div class="text-danger">{{ form.comment.errors }}</div>
                             {% endif %}
                         </div>
+                        
+                        <!-- Поле скидочного кода -->
+                        <div class="col-md-6">
+                            <label for="{{ form.discount_code.id_for_label }}" class="form-label optional-field">Код скидки</label>
+                            <div class="input-group">
+                                {{ form.discount_code }}
+                                <button type="button" class="btn btn-outline-secondary" id="checkDiscountBtn" onclick="checkDiscountCode()">
+                                    <i class="fas fa-check"></i> Проверить
+                                </button>
+                            </div>
+                            {% if form.discount_code.errors %}
+                                <div class="text-danger">{{ form.discount_code.errors }}</div>
+                            {% endif %}
+                            <div id="discountResult" class="mt-2"></div>
+                        </div>
+                        <div class="col-md-6"></div>
+                        
                         <div style="display: none;">
                             {{ form.deposit_amount }}
                         </div>
@@ -148,6 +165,22 @@
                         <strong>Сумма за день:</strong>
                         <span class="h5 text-muted" id="dailyTotal">{{ total|format_price }} сум</span>
                     </div>
+                    
+                    <!-- Показываем подытог если есть скидка -->
+                    <div class="d-flex justify-content-between align-items-center mb-2" id="subtotalRow" style="display: none;">
+                        <span>Подытог за период:</span>
+                        <span class="text-muted" id="subtotalAmount">0 сум</span>
+                    </div>
+                    
+                    <!-- Показываем скидку если применена -->
+                    <div class="d-flex justify-content-between align-items-center mb-2" id="discountRow" style="display: none;">
+                        <span class="text-success">
+                            <i class="fas fa-percent me-1"></i>
+                            Скидка <span id="discountPercentDisplay">0</span>%:
+                        </span>
+                        <span class="text-success" id="discountAmountDisplay">-0 сум</span>
+                    </div>
+                    
                     <div class="d-flex justify-content-between align-items-center">
                         <strong>Итого за весь период:</strong>
                         <strong class="text-success h4" id="grandTotal">{{ total|format_price }} сум</strong>
@@ -216,6 +249,23 @@
     font-weight: normal;
     font-style: italic;
 }
+
+/* Стили для скидочного кода */
+#discountResult .alert {
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#subtotalRow, #discountRow {
+    padding: 0.25rem 0;
+}
+
+#discountRow {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
 </style>
 {% endblock %}
 
@@ -224,6 +274,11 @@
 // Безопасная инициализация переменных
 let cartItems = [];
 let dailyTotal = 0;
+let appliedDiscount = {
+    code: null,
+    percent: 0,
+    amount: 0
+};
 
 // Функция для форматирования цен
 function formatPrice(price) {
@@ -238,6 +293,96 @@ function formatPrice(price) {
     } catch (error) {
         return String(price);
     }
+}
+
+// Функция для проверки скидочного кода
+function checkDiscountCode() {
+    const discountInput = document.getElementById('{{ form.discount_code.id_for_label }}');
+    const discountResult = document.getElementById('discountResult');
+    const checkBtn = document.getElementById('checkDiscountBtn');
+    
+    const code = discountInput.value.trim().toUpperCase();
+    
+    if (!code) {
+        discountResult.innerHTML = '<small class="text-muted">Введите код скидки</small>';
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    checkBtn.disabled = true;
+    checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    discountResult.innerHTML = '<small class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Проверяем код...</small>';
+    
+    // Проверяем код через API
+    fetch(`/api/check-discount-code/?code=${encodeURIComponent(code)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                // Код действителен
+                appliedDiscount = {
+                    code: data.code,
+                    percent: data.discount_percent,
+                    amount: 0 // будет рассчитано в calculateRentalDays
+                };
+                
+                discountResult.innerHTML = `
+                    <div class="alert alert-success py-2">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <strong>Код принят!</strong> Скидка ${data.discount_percent}%
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeDiscount()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                discountInput.value = data.code;
+                discountInput.readOnly = true;
+                
+                // Пересчитываем сумму
+                calculateRentalDays();
+                
+            } else {
+                // Код недействителен
+                appliedDiscount = { code: null, percent: 0, amount: 0 };
+                discountResult.innerHTML = `
+                    <div class="alert alert-danger py-2">
+                        <i class="fas fa-times-circle me-1"></i>
+                        ${data.error || 'Неверный код скидки'}
+                    </div>
+                `;
+                calculateRentalDays();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking discount code:', error);
+            discountResult.innerHTML = `
+                <div class="alert alert-warning py-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Ошибка при проверке кода. Попробуйте позже.
+                </div>
+            `;
+        })
+        .finally(() => {
+            checkBtn.disabled = false;
+            checkBtn.innerHTML = '<i class="fas fa-check"></i> Проверить';
+        });
+}
+
+// Функция для удаления скидки
+function removeDiscount() {
+    const discountInput = document.getElementById('{{ form.discount_code.id_for_label }}');
+    const discountResult = document.getElementById('discountResult');
+    
+    appliedDiscount = { code: null, percent: 0, amount: 0 };
+    discountInput.value = '';
+    discountInput.readOnly = false;
+    discountResult.innerHTML = '';
+    
+    // Скрываем детализацию скидки
+    hideDiscountDisplay();
+    
+    // Пересчитываем сумму
+    calculateRentalDays();
 }
 
 // Инициализация данных о товарах из скрытого блока
@@ -288,9 +433,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Добавляем подсказки для новых полей
     setupFieldTooltips();
-    
-    // ВАЖНО: Убираем setupFormHandler() - он блокировал отправку формы
-    // setupFormHandler(); // УБРАНО - это было причиной проблемы
 });
 
 function calculateRentalDays() {
@@ -301,6 +443,7 @@ function calculateRentalDays() {
         document.getElementById('rentalDaysInfo').style.display = 'none';
         document.getElementById('grandTotal').textContent = formatPrice(dailyTotal) + ' сум';
         document.getElementById('totalCalculation').textContent = 'Выберите даты аренды для расчета итоговой суммы';
+        hideDiscountDisplay();
         updateItemsDisplay(1);
         return;
     }
@@ -323,14 +466,41 @@ function calculateRentalDays() {
     document.getElementById('rentalDaysInfo').style.display = 'block';
     
     // Рассчитываем итоговую сумму
-    const grandTotal = dailyTotal * daysDiff;
+    const subtotal = dailyTotal * daysDiff;
+    
+    // Применяем скидку если есть
+    let discountAmount = 0;
+    let grandTotal = subtotal;
+    
+    if (appliedDiscount.code && appliedDiscount.percent > 0) {
+        discountAmount = (subtotal * appliedDiscount.percent) / 100;
+        grandTotal = subtotal - discountAmount;
+        appliedDiscount.amount = discountAmount;
+        
+        // Показываем детализацию скидки
+        showDiscountDisplay(subtotal, discountAmount);
+    } else {
+        // Скрываем детализацию скидки
+        hideDiscountDisplay();
+    }
     
     // Обновляем отображение
     document.getElementById('grandTotal').textContent = formatPrice(grandTotal) + ' сум';
-    document.getElementById('totalCalculation').innerHTML = `
+    
+    let calculationText = `
         <i class="fas fa-calculator text-primary"></i> 
-        ${formatPrice(dailyTotal)} сум/день × ${daysDiff} дней = <strong>${formatPrice(grandTotal)} сум</strong>
+        ${formatPrice(dailyTotal)} сум/день × ${daysDiff} дней
     `;
+    
+    if (discountAmount > 0) {
+        calculationText += ` = ${formatPrice(subtotal)} сум`;
+        calculationText += `<br><span class="text-success">Применена скидка ${appliedDiscount.percent}%</span>`;
+        calculationText += `<br><strong class="text-primary">Итого: ${formatPrice(grandTotal)} сум</strong>`;
+    } else {
+        calculationText += ` = <strong>${formatPrice(grandTotal)} сум</strong>`;
+    }
+    
+    document.getElementById('totalCalculation').innerHTML = calculationText;
     
     // Обновляем отображение каждого товара
     updateItemsDisplay(daysDiff);
@@ -342,6 +512,35 @@ function calculateRentalDays() {
     setTimeout(() => {
         grandTotalElement.style.transform = 'scale(1)';
     }, 300);
+}
+
+// Функция для показа детализации скидки
+function showDiscountDisplay(subtotal, discountAmount) {
+    const subtotalRow = document.getElementById('subtotalRow');
+    const discountRow = document.getElementById('discountRow');
+    const subtotalAmountEl = document.getElementById('subtotalAmount');
+    const discountPercentEl = document.getElementById('discountPercentDisplay');
+    const discountAmountEl = document.getElementById('discountAmountDisplay');
+    
+    if (subtotalRow && discountRow) {
+        subtotalRow.style.display = 'flex';
+        discountRow.style.display = 'flex';
+        
+        subtotalAmountEl.textContent = formatPrice(subtotal) + ' сум';
+        discountPercentEl.textContent = appliedDiscount.percent;
+        discountAmountEl.textContent = '-' + formatPrice(discountAmount) + ' сум';
+    }
+}
+
+// Функция для скрытия детализации скидки
+function hideDiscountDisplay() {
+    const subtotalRow = document.getElementById('subtotalRow');
+    const discountRow = document.getElementById('discountRow');
+    
+    if (subtotalRow && discountRow) {
+        subtotalRow.style.display = 'none';
+        discountRow.style.display = 'none';
+    }
 }
 
 function updateItemsDisplay(days) {
@@ -404,27 +603,114 @@ document.addEventListener('DOMContentLoaded', function() {
 
     phoneInputs.forEach(input => {
         if (input) {
+            // Форматирование при вводе
             input.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
+                let value = e.target.value.replace(/\D/g, ''); // Убираем все нецифровые символы
+                let formattedValue = '';
                 
+                // Если начинается с 998, удаляем его для корректного форматирования
                 if (value.startsWith('998')) {
-                    if (value.length >= 3) {
-                        value = '+998 ' + value.substring(3);
-                    }
-                    if (value.length >= 7) {
-                        value = value.substring(0, 5) + '(' + value.substring(5, 7) + ') ' + value.substring(7);
-                    }
-                    if (value.length >= 14) {
-                        value = value.substring(0, 14) + '-' + value.substring(14, 16) + '-' + value.substring(16, 18);
-                    }
-                } else if (value.length > 0 && !value.startsWith('998')) {
-                    value = '998' + value;
-                    e.target.value = value;
-                    e.target.dispatchEvent(new Event('input'));
-                    return;
+                    value = value.substring(3);
                 }
                 
-                e.target.value = value;
+                // Ограничиваем длину до 9 цифр (без кода страны)
+                if (value.length > 9) {
+                    value = value.substring(0, 9);
+                }
+                
+                // Форматируем номер
+                if (value.length > 0) {
+                    formattedValue = '+998 ';
+                    if (value.length >= 2) {
+                        formattedValue += '(' + value.substring(0, 2) + ') ';
+                        if (value.length >= 5) {
+                            formattedValue += value.substring(2, 5) + '-';
+                            if (value.length >= 7) {
+                                formattedValue += value.substring(5, 7) + '-';
+                                if (value.length >= 9) {
+                                    formattedValue += value.substring(7, 9);
+                                } else if (value.length > 7) {
+                                    formattedValue += value.substring(7);
+                                }
+                            } else if (value.length > 5) {
+                                formattedValue += value.substring(5);
+                            }
+                        } else if (value.length > 2) {
+                            formattedValue += value.substring(2);
+                        }
+                    } else {
+                        formattedValue += value;
+                    }
+                }
+                
+                // Устанавливаем отформатированное значение
+                e.target.value = formattedValue;
+            });
+            
+            // Обработка клавиш Backspace и Delete
+            input.addEventListener('keydown', function(e) {
+                const cursorPosition = e.target.selectionStart;
+                const value = e.target.value;
+                
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                    // Если курсор находится на служебном символе, перемещаем его
+                    const serviceChars = ['+', '9', '8', ' ', '(', ')', '-'];
+                    const charAtCursor = value[cursorPosition - 1];
+                    
+                    if (e.key === 'Backspace' && serviceChars.includes(charAtCursor)) {
+                        e.preventDefault();
+                        // Находим предыдущую цифру и удаляем её
+                        let newValue = value.replace(/\D/g, ''); // Убираем все нецифровые
+                        if (newValue.startsWith('998')) {
+                            newValue = newValue.substring(3);
+                        }
+                        
+                        // Удаляем последнюю цифру
+                        if (newValue.length > 0) {
+                            newValue = newValue.slice(0, -1);
+                        }
+                        
+                        // Переформатируем
+                        let formattedValue = '';
+                        if (newValue.length > 0) {
+                            formattedValue = '+998 ';
+                            if (newValue.length >= 2) {
+                                formattedValue += '(' + newValue.substring(0, 2) + ') ';
+                                if (newValue.length >= 5) {
+                                    formattedValue += newValue.substring(2, 5) + '-';
+                                    if (newValue.length >= 7) {
+                                        formattedValue += newValue.substring(5, 7) + '-';
+                                        if (newValue.length >= 9) {
+                                            formattedValue += newValue.substring(7, 9);
+                                        } else if (newValue.length > 7) {
+                                            formattedValue += newValue.substring(7);
+                                        }
+                                    } else if (newValue.length > 5) {
+                                        formattedValue += newValue.substring(5);
+                                    }
+                                } else if (newValue.length > 2) {
+                                    formattedValue += newValue.substring(2);
+                                }
+                            } else {
+                                formattedValue += newValue;
+                            }
+                        }
+                        
+                        e.target.value = formattedValue;
+                        
+                        // Устанавливаем курсор в конец
+                        setTimeout(() => {
+                            e.target.setSelectionRange(formattedValue.length, formattedValue.length);
+                        }, 0);
+                    }
+                }
+            });
+            
+            // Установка курсора в конец при фокусе
+            input.addEventListener('focus', function(e) {
+                setTimeout(() => {
+                    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }, 0);
             });
         }
     });

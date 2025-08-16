@@ -711,6 +711,88 @@ function updateSelectedTags() {
     });
 }
 
+// Новая функция для автоматического выбора родительских тегов
+function selectParentTags(tagCheckbox) {
+    // Получаем данные о теге из API
+    const tagId = tagCheckbox.value;
+    
+    fetch('{% url "tag_structure_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            // Находим выбранный тег в структуре
+            const selectedTag = findTagInTree(data.tree, parseInt(tagId));
+            if (selectedTag) {
+                // Выбираем всех родителей
+                selectParentsRecursively(selectedTag, data.tree);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка получения структуры тегов:', error);
+        });
+}
+
+// Функция для поиска тега в дереве
+function findTagInTree(tree, tagId) {
+    for (let tag of tree) {
+        if (tag.id === tagId) {
+            return tag;
+        }
+        if (tag.children && tag.children.length > 0) {
+            const found = findTagInTree(tag.children, tagId);
+            if (found) {
+                return found;
+            }
+        }
+    }
+    return null;
+}
+
+// Функция для рекурсивного выбора родителей
+function selectParentsRecursively(tag, fullTree) {
+    // Находим родителя этого тега
+    const parent = findParentOfTag(fullTree, tag.id);
+    if (parent) {
+        // Выбираем родительский чекбокс
+        const parentCheckbox = document.getElementById(`tag_${parent.id}`);
+        if (parentCheckbox && !parentCheckbox.checked) {
+            parentCheckbox.checked = true;
+            // Рекурсивно выбираем родителей родителя
+            selectParentsRecursively(parent, fullTree);
+        }
+    }
+}
+
+// Функция для поиска родителя тега
+function findParentOfTag(tree, tagId, parent = null) {
+    for (let tag of tree) {
+        if (tag.id === tagId) {
+            return parent;
+        }
+        if (tag.children && tag.children.length > 0) {
+            const found = findParentOfTag(tag.children, tagId, tag);
+            if (found) {
+                return found;
+            }
+        }
+    }
+    return null;
+}
+
+// Обновляем обработчик изменения чекбоксов
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем обработчики для всех чекбоксов тегов
+    setTimeout(() => {
+        document.querySelectorAll('.tag-option input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    selectParentTags(this);
+                }
+                updateSelectedTags();
+            });
+        });
+    }, 1000);
+});
+
 function removeTag(checkboxId) {
     const checkbox = document.getElementById(checkboxId);
     if (checkbox) {

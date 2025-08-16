@@ -18,4 +18,5 @@ urlpatterns = [
     path('download-order/<int:order_id>/', views.download_order_pdf, name='download_order_pdf'),
     
     path('api/smart-search-status/', views.smart_search_status, name='smart_search_status'),
+    path('api/check-discount-code/', views.check_discount_code_api, name='check_discount_code_api'),
 ]

@@ -48,4 +48,7 @@ urlpatterns = [
     path('barcode/generate/<int:product_id>/', admin_views.generate_barcode_image, name='generate_barcode_image'),
     path('barcode/download/<int:product_id>/', admin_views.download_barcode, name='download_barcode'),
     path('barcodes/print/', admin_views.print_all_barcodes, name='print_all_barcodes'),
+
+    path('discount-codes/', admin_views.discount_codes_management, name='discount_codes_management'),
+    path('api/check-discount-code/', admin_views.check_discount_code_api, name='check_discount_code_api'),
 ]

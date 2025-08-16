@@ -4,6 +4,7 @@ from django.utils import timezone
 import random
 import string
 import markdown
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 class Storage(models.Model):
     name = models.CharField(max_length=10, verbose_name='Название стойки')
@@ -150,11 +151,15 @@ class Product(models.Model):
         if not self.barcode:
             self.barcode = self.generate_ean13_barcode()
         
+        if not self.pk:  # Если это новый товар (еще не сохранен в БД)
+            self.available_quantity = self.quantity
+
         # Артикул всегда равен штрих-коду
         self.article = self.barcode
         
         if self.description:
-            self.description = self.description.strip().lower()
+            self.description = self.description.strip()
+            
         super().save(*args, **kwargs)
 
     def get_display_name(self):
@@ -194,71 +199,88 @@ class Product(models.Model):
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
 
+ORDER_STATUS_CHOICES = [
+    ('pending', 'Ожидает подтверждения'),
+    ('confirmed', 'Подтверждена'),
+    ('completed', 'Завершена'),
+    ('rejected', 'Отклонена'),
+]
+
+PAYMENT_STATUS_CHOICES = [
+    ('unpaid', 'Не оплачена'),
+    ('paid', 'Оплачена'),
+]
+
 class Order(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Ожидает подтверждения'),
-        ('confirmed', 'Подтверждена'),
-        ('completed', 'Завершена'),
-        ('rejected', 'Отклонена'),
-    ]
+    contact_person = models.CharField(max_length=200, verbose_name="Контактное лицо")
+    phone1 = models.CharField(max_length=20, verbose_name="Основной телефон")
+    phone2 = models.CharField(max_length=20, blank=True, verbose_name="Дополнительный телефон")
+    production_name = models.CharField(max_length=200, blank=True, verbose_name="Название продакшена")
+    project_name = models.CharField(max_length=200, blank=True, verbose_name="Название проекта")
+    rental_start = models.DateField(verbose_name="Дата начала аренды")
+    rental_end = models.DateField(verbose_name="Дата окончания аренды")
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
+    status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending', verbose_name="Статус")
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid', verbose_name="Статус оплаты")
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Общая сумма")
+    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Сумма залога")
     
-    PAYMENT_CHOICES = [
-        ('paid', 'Оплачена'),
-        ('unpaid', 'Не оплачена'),
-    ]
+    # Новые поля для скидки
+    discount_code = models.CharField(max_length=50, blank=True, null=True, verbose_name="Код скидки")
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Процент скидки")
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Сумма скидки")
+    total_before_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Сумма до скидки")
     
-    contact_person = models.CharField(max_length=200, verbose_name='Контактное лицо')
-    phone1 = models.CharField(max_length=20, verbose_name='Телефон 1')
-    phone2 = models.CharField(max_length=20, blank=True, verbose_name='Телефон 2')
+    created_by_admin = models.BooleanField(default=False, verbose_name="Создана администратором")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     
-    # НОВЫЕ ПОЛЯ
-    production_name = models.CharField(max_length=200, blank=True, verbose_name='Название продакшена')
-    project_name = models.CharField(max_length=200, blank=True, verbose_name='Название проекта')
-    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Сумма залога')
-    
-    comment = models.TextField(blank=True, verbose_name='Комментарий')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='unpaid', verbose_name='Оплата')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
-    rental_start = models.DateField(verbose_name='Начало аренды')
-    rental_end = models.DateField(verbose_name='Конец аренды')
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Общая сумма')
-    created_by_admin = models.BooleanField(default=False, verbose_name='Создана администратором')
+    class Meta:
+        verbose_name = "Заявка"
+        verbose_name_plural = "Заявки"
+        ordering = ['-created_at']
     
     def __str__(self):
         return f"Заявка #{self.id} - {self.contact_person}"
     
+    def get_status_display(self):
+        return dict(ORDER_STATUS_CHOICES)[self.status]
+    
+    def get_payment_status_display(self):
+        return dict(PAYMENT_STATUS_CHOICES)[self.payment_status]
+    
+    def get_display_comment(self):
+        """Возвращает отформатированный комментарий для отображения"""
+        if self.comment:
+            # Заменяем переносы строк на <br> для HTML отображения
+            return self.comment.replace('\n', '<br>')
+        return ""
+    
     def get_rental_days(self):
         """Возвращает количество дней аренды"""
-        return (self.rental_end - self.rental_start).days + 1
+        if self.rental_start and self.rental_end:
+            return (self.rental_end - self.rental_start).days + 1
+        return 0
     
     def get_daily_average(self):
         """Возвращает среднюю стоимость за день"""
-        rental_days = self.get_rental_days()
-        if rental_days > 0:
-            return self.total_amount / rental_days
+        days = self.get_rental_days()
+        if days > 0:
+            return self.total_amount / days
         return 0
     
-    def save(self, *args, **kwargs):
-        self.contact_person = ' '.join(word.capitalize() for word in self.contact_person.strip().split())
-        if self.comment:
-            self.comment = self.comment.strip().lower()
-        if self.production_name:
-            self.production_name = self.production_name.strip()
-        if self.project_name:
-            self.project_name = self.project_name.strip()
-        super().save(*args, **kwargs)
-    
-    def get_display_comment(self):
-        """Возвращает комментарий с заглавной буквы"""
-        if self.comment:
-            return self.comment.capitalize()
-        return ''
+    def get_final_total(self):
+        """Возвращает финальную сумму с учетом скидки"""
+        if self.discount_amount > 0:
+            return max(0, self.total_amount - self.discount_amount)
+        return self.total_amount
 
-    class Meta:
-        verbose_name = 'Заявка'
-        verbose_name_plural = 'Заявки'
-        ordering = ['-created_at']
+    def apply_discount(self, discount_code_obj):
+        """Применяет скидку к заказу"""
+        self.discount_code = discount_code_obj.code
+        self.discount_percent = discount_code_obj.discount_percent
+        self.total_before_discount = self.total_amount
+        self.discount_amount = (self.total_amount * self.discount_percent) / 100
+        self.total_amount = self.get_final_total()
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name='Заявка')
@@ -276,3 +298,25 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'Позиция заявки'
         verbose_name_plural = 'Позиции заявки'
+
+class DiscountCode(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="Код скидки")
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, validators=[
+        MinValueValidator(0), MaxValueValidator(100)
+    ], verbose_name="Процент скидки")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    
+    class Meta:
+        verbose_name = "Скидочный код"
+        verbose_name_plural = "Скидочные коды"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.code} ({self.discount_percent}%)"
+    
+    def save(self, *args, **kwargs):
+        # Приводим код к верхнему регистру
+        self.code = self.code.upper()
+        super().save(*args, **kwargs)

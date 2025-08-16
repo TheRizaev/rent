@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Storage, Shelf, Tag, Product, Order, OrderItem
+from .models import Storage, Shelf, Tag, Product, Order, OrderItem, DiscountCode
 
 @admin.register(Storage)
 class StorageAdmin(admin.ModelAdmin):
@@ -59,3 +59,24 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ['order', 'product', 'quantity', 'price']
     list_filter = ['order__status', 'product']
     search_fields = ['order__contact_person', 'product__name']
+
+
+@admin.register(DiscountCode)
+class DiscountCodeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'discount_percent', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['code']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('code', 'discount_percent')
+        }),
+        ('Настройки', {
+            'fields': ('is_active',)
+        }),
+        ('Служебная информация', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

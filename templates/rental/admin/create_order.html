@@ -84,6 +84,25 @@
                         <div class="col-md-6"></div>
                         {% endif %}
                         
+                        <!-- Код скидки -->
+                        <div class="col-md-6">
+                            <label for="{{ form.discount_code.id_for_label }}" class="form-label">
+                                Код скидки
+                                <small class="text-muted">(необязательно)</small>
+                            </label>
+                            <div class="input-group">
+                                {{ form.discount_code }}
+                                <button type="button" class="btn btn-outline-secondary" id="checkDiscountBtn" onclick="checkDiscountCode()">
+                                    <i class="fas fa-check"></i> Проверить
+                                </button>
+                            </div>
+                            {% if form.discount_code.errors %}
+                                <div class="text-danger">{{ form.discount_code.errors }}</div>
+                            {% endif %}
+                            <div id="discountResult" class="mt-2"></div>
+                        </div>
+                        <div class="col-md-6"></div>
+                        
                         <div class="col-md-6">
                             <label for="{{ form.rental_start.id_for_label }}" class="form-label">Начало аренды</label>
                             {{ form.rental_start }}
@@ -231,6 +250,13 @@
 {% block extra_js %}
 <script>
 let cart = [];
+let appliedDiscount = {
+    code: null,
+    percent: 0,
+    amount: 0
+};
+
+
 
 function formatPrice(price) {
     return Math.round(price).toLocaleString('ru-RU').replace(/,/g, '.');
@@ -316,11 +342,11 @@ function updateCartDisplay() {
     }
     
     let html = '';
-    let total = 0;
+    let subtotal = 0;
     
     cart.forEach(item => {
         const itemTotal = item.price * item.quantity;
-        total += itemTotal;
+        subtotal += itemTotal;
         
         html += `
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
@@ -348,8 +374,30 @@ function updateCartDisplay() {
         `;
     });
     
+    // Применяем скидку если есть
+    let discountAmount = 0;
+    let finalTotal = subtotal;
+    
+    if (appliedDiscount.code && appliedDiscount.percent > 0) {
+        discountAmount = (subtotal * appliedDiscount.percent) / 100;
+        finalTotal = subtotal - discountAmount;
+        appliedDiscount.amount = discountAmount;
+        
+        html += `
+            <hr>
+            <div class="d-flex justify-content-between text-muted">
+                <span>Подытог:</span>
+                <span>${formatPrice(subtotal)} сум</span>
+            </div>
+            <div class="d-flex justify-content-between text-success">
+                <span>Скидка ${appliedDiscount.percent}%:</span>
+                <span>-${formatPrice(discountAmount)} сум</span>
+            </div>
+        `;
+    }
+    
     cartItems.innerHTML = html;
-    totalAmount.textContent = `${formatPrice(total)} сум`;
+    totalAmount.textContent = `${formatPrice(finalTotal)} сум`;
     submitBtn.disabled = false;
     
     // Обновляем скрытое поле с данными корзины
@@ -365,7 +413,13 @@ function updateDepositDisplay() {
     if (!depositInput || !depositDisplay || !totalWithDeposit) return;
     
     const depositAmount = parseFloat(depositInput.value) || 0;
-    const orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Применяем скидку к общей сумме заказа
+    if (appliedDiscount.code && appliedDiscount.percent > 0) {
+        const discountAmount = (orderTotal * appliedDiscount.percent) / 100;
+        orderTotal = orderTotal - discountAmount;
+    }
     
     depositDisplay.textContent = `${formatPrice(depositAmount)} сум`;
     totalWithDeposit.textContent = `${formatPrice(orderTotal + depositAmount)} сум`;
@@ -509,6 +563,95 @@ function showNotification(message, type = 'success') {
             alert.remove();
         }
     }, 3000);
+}
+
+// Функция для проверки скидочного кода
+function checkDiscountCode() {
+    const discountInput = document.getElementById('{{ form.discount_code.id_for_label }}');
+    const discountResult = document.getElementById('discountResult');
+    const checkBtn = document.getElementById('checkDiscountBtn');
+    
+    const code = discountInput.value.trim().toUpperCase();
+    
+    if (!code) {
+        discountResult.innerHTML = '<small class="text-muted">Введите код скидки</small>';
+        return;
+    }
+    
+    // Показываем индикатор загрузки
+    checkBtn.disabled = true;
+    checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    discountResult.innerHTML = '<small class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Проверяем код...</small>';
+    
+    // Проверяем код через API
+    fetch(`{% url 'check_discount_code_api' %}?code=${encodeURIComponent(code)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                // Код действителен
+                appliedDiscount = {
+                    code: data.code,
+                    percent: data.discount_percent,
+                    amount: 0 // будет рассчитано в updateCartDisplay
+                };
+                
+                discountResult.innerHTML = `
+                    <div class="alert alert-success py-2">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <strong>Код принят!</strong> Скидка ${data.discount_percent}%
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeDiscount()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                discountInput.value = data.code;
+                discountInput.readOnly = true;
+                
+                // Пересчитываем сумму
+                updateCartDisplay();
+                updateDepositDisplay();
+                
+            } else {
+                // Код недействителен
+                appliedDiscount = { code: null, percent: 0, amount: 0 };
+                discountResult.innerHTML = `
+                    <div class="alert alert-danger py-2">
+                        <i class="fas fa-times-circle me-1"></i>
+                        ${data.error || 'Неверный код скидки'}
+                    </div>
+                `;
+                updateCartDisplay();
+                updateDepositDisplay();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking discount code:', error);
+            discountResult.innerHTML = `
+                <div class="alert alert-warning py-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Ошибка при проверке кода. Попробуйте позже.
+                </div>
+            `;
+        })
+        .finally(() => {
+            checkBtn.disabled = false;
+            checkBtn.innerHTML = '<i class="fas fa-check"></i> Проверить';
+        });
+}
+
+// Функция для удаления скидки
+function removeDiscount() {
+    const discountInput = document.getElementById('{{ form.discount_code.id_for_label }}');
+    const discountResult = document.getElementById('discountResult');
+    
+    appliedDiscount = { code: null, percent: 0, amount: 0 };
+    discountInput.value = '';
+    discountInput.readOnly = false;
+    discountResult.innerHTML = '';
+    
+    updateCartDisplay();
+    updateDepositDisplay();
 }
 
 // Обработчики событий

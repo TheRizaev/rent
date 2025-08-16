@@ -319,6 +319,13 @@ def checkout(request):
                     pass
             
             order.total_amount = total
+            order.total_before_discount = total
+            
+            # Применяем скидку если есть
+            discount_code = form.cleaned_data.get('discount_code')
+            if discount_code and hasattr(form, 'discount_code_obj'):
+                order.apply_discount(form.discount_code_obj)
+            
             order.created_by_admin = request.user.is_staff if request.user.is_authenticated else False
             
             # Если заявка создается админом, автоматически подтверждаем
@@ -886,3 +893,22 @@ def smart_search_status(request):
             'configured': False,
             'error': str(e)
         })
+
+def check_discount_code_api(request):
+    """API для проверки скидочного кода"""
+    from .models import DiscountCode
+    
+    code = request.GET.get('code', '').strip().upper()
+    
+    if not code:
+        return JsonResponse({'valid': False, 'error': 'Код не указан'})
+    
+    try:
+        discount_code = DiscountCode.objects.get(code=code, is_active=True)
+        return JsonResponse({
+            'valid': True,
+            'code': discount_code.code,
+            'discount_percent': float(discount_code.discount_percent)
+        })
+    except DiscountCode.DoesNotExist:
+        return JsonResponse({'valid': False, 'error': 'Неверный код скидки или код неактивен'})

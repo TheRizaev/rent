@@ -907,6 +907,166 @@
             padding: 0.75rem;
         }
     }
+
+    .tag-item {
+        display: block;
+        padding: 0.75rem 1.5rem;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .tag-item:hover {
+        color: var(--blue-light);
+        border-left-color: var(--blue-light);
+        background: rgba(88, 166, 255, 0.1);
+    }
+
+    .tag-item.active {
+        color: var(--blue);
+        border-left-color: var(--blue);
+        background: rgba(88, 166, 255, 0.15);
+        font-weight: 600;
+    }
+
+    /* Контейнеры для элементов с кнопками */
+    .tag-item-container {
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    .tag-item-link {
+        flex: 1;
+        display: block;
+        padding: 0.75rem 1.5rem;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .tag-item-link:hover {
+        color: var(--blue-light);
+        border-left-color: var(--blue-light);
+        background: rgba(88, 166, 255, 0.1);
+    }
+
+    .tag-item-link.active {
+        color: var(--blue);
+        border-left-color: var(--blue);
+        background: rgba(88, 166, 255, 0.15);
+        font-weight: 600;
+    }
+
+    /* Кнопки разворачивания */
+    .tag-toggle-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        padding: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+    }
+
+    .tag-toggle-btn:hover {
+        background: rgba(88, 166, 255, 0.1);
+        color: var(--blue);
+    }
+
+    .tag-toggle-btn .toggle-icon {
+        transition: transform 0.3s ease;
+        font-size: 0.75rem;
+    }
+
+    .tag-toggle-btn.expanded .toggle-icon {
+        transform: rotate(90deg);
+    }
+
+    .child-toggle {
+        width: 24px;
+        height: 24px;
+        margin-right: 0.25rem;
+    }
+
+    /* Дочерние контейнеры */
+    .child-container {
+        margin-left: 1rem;
+    }
+
+    /* Child tags */
+    .tag-item.child {
+        padding-left: 2rem;
+        font-size: 0.9rem;
+        border-left: none;
+        position: relative;
+    }
+
+    .tag-item.child::before {
+        content: '';
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        width: 12px;
+        height: 1px;
+        background: var(--border-color);
+        transform: translateY(-50%);
+    }
+
+    .tag-item.child:hover {
+        background: rgba(88, 166, 255, 0.08);
+    }
+
+    /* Стили для дочерних элементов второго уровня */
+    .tag-item.child-level-2 {
+        padding-left: 3rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .tag-item.child-level-2::before {
+        left: 2rem;
+        width: 8px;
+    }
+
+    .tag-item.child-level-2:hover {
+        color: var(--blue-light);
+        background: rgba(88, 166, 255, 0.06);
+    }
+
+    .tag-item.child-level-2.active {
+        color: var(--blue);
+        background: rgba(88, 166, 255, 0.15);
+        font-weight: 600;
+    }
+
+    /* Tag children containers */
+    .tag-children {
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: var(--card-color);
+    }
+
+    .tag-children.collapsed {
+        max-height: 0;
+    }
+
+    .tag-children:not(.collapsed) {
+        max-height: 1000px; /* Достаточно большое значение для анимации */
+    }
 </style>
 
 <div class="catalog-layout">
@@ -942,33 +1102,80 @@
             {% if root_tags %}
                 {% for tag in root_tags %}
                     <div class="tag-group">
-                        {% if tag.get_children %}
-                            <!-- Parent tag with children -->
-                            <a href="#" class="tag-item has-children" 
-                               data-tag-id="{{ tag.id }}" 
-                               data-has-children="true"
-                               onclick="toggleTagChildren({{ tag.id }}, event)">
+                        <!-- Родительская категория с управляемым разворачиванием -->
+                        <div class="tag-item-container">
+                            <!-- Кликабельная область названия -->
+                            <a href="?tag={{ tag.id }}" 
+                               class="tag-item-link {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}">
                                 <i class="fas fa-folder me-2"></i>
                                 {{ tag.get_display_name }}
                             </a>
                             
-                            <div class="tag-children" id="children-{{ tag.id }}">
-                                {% for child in tag.get_children %}
-                                    <a href="?tag={{ child.id }}" 
-                                       class="tag-item child {% if request.GET.tag == child.id|stringformat:'s' %}active{% endif %}">
-                                        <i class="fas fa-tag me-2"></i>
-                                        {{ child.get_display_name }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <!-- Tag without children (direct filter) -->
-                            <a href="?tag={{ tag.id }}" 
-                               class="tag-item {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}">
-                                <i class="fas fa-tag me-2"></i>
-                                {{ tag.get_display_name }}
-                            </a>
-                        {% endif %}
+                            <!-- Стрелка для разворачивания (только если есть дочерние) -->
+                            {% with children=tag.get_children %}
+                                {% if children %}
+                                    <button class="tag-toggle-btn" 
+                                            data-tag-id="{{ tag.id }}" 
+                                            onclick="toggleTagGroup('{{ tag.id }}', event)">
+                                        <i class="fas fa-chevron-right toggle-icon" id="icon-{{ tag.id }}"></i>
+                                    </button>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        
+                        <!-- Дочерние категории (изначально скрыты) -->
+                        {% with children=tag.get_children %}
+                            {% if children %}
+                                <div class="tag-children collapsed" id="children-{{ tag.id }}">
+                                    {% for child in children %}
+                                        <div class="tag-item-container child-container">
+                                            <!-- Дочерний тег первого уровня -->
+                                            <a href="?tag={{ child.id }}" 
+                                               class="tag-item child {% if request.GET.tag == child.id|stringformat:'s' %}active{% endif %}">
+                                                <i class="fas fa-tag me-2"></i>
+                                                {{ child.get_display_name }}
+                                                {% with child_products_count=child.product_set.count %}
+                                                    {% if child_products_count > 0 %}
+                                                        <span class="ms-1 text-muted">({{ child_products_count }})</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </a>
+                                            
+                                            <!-- Стрелка для дочерних второго уровня -->
+                                            {% with grandchildren=child.get_children %}
+                                                {% if grandchildren %}
+                                                    <button class="tag-toggle-btn child-toggle" 
+                                                            data-tag-id="child-{{ child.id }}" 
+                                                            onclick="toggleTagGroup('child-{{ child.id }}', event)">
+                                                        <i class="fas fa-chevron-right toggle-icon" id="icon-child-{{ child.id }}"></i>
+                                                    </button>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                        
+                                        <!-- Дочерние элементы второго уровня -->
+                                        {% with grandchildren=child.get_children %}
+                                            {% if grandchildren %}
+                                                <div class="tag-children collapsed" id="children-child-{{ child.id }}">
+                                                    {% for grandchild in grandchildren %}
+                                                        <a href="?tag={{ grandchild.id }}" 
+                                                           class="tag-item child child-level-2 {% if request.GET.tag == grandchild.id|stringformat:'s' %}active{% endif %}">
+                                                            <i class="fas fa-angle-right me-2"></i>
+                                                            {{ grandchild.get_display_name }}
+                                                            {% with grandchild_products_count=grandchild.product_set.count %}
+                                                                {% if grandchild_products_count > 0 %}
+                                                                    <span class="ms-1 text-muted">({{ grandchild_products_count }})</span>
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
                     </div>
                 {% endfor %}
             {% endif %}
@@ -1157,7 +1364,6 @@ let sidebarOpen = true;
 let expandedTags = new Set();
 let useSmartSearch = {{ use_smart_search|yesno:"true,false" }};
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Existing initialization code...
     const savedSidebarState = localStorage.getItem('sidebarOpen');
@@ -1180,14 +1386,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    const activeChildTag = document.querySelector('.tag-item.child.active');
-    if (activeChildTag) {
-        const parentContainer = activeChildTag.closest('.tag-children');
-        if (parentContainer) {
-            const tagId = parentContainer.id.replace('children-', '');
-            expandTag(tagId);
-        }
-    }
+    // Автоматически разворачиваем группы для активного тега
+    expandParentGroupsForActiveTag();
     
     applySidebarStateInstant();
     setupAjaxForms();
@@ -1471,22 +1671,81 @@ function closeSidebarMobile() {
     }
 }
 
-function toggleTagChildren(tagId, event) {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const tagItem = event.currentTarget;
-    const childrenContainer = document.getElementById(`children-${tagId}`);
-    
-    if (!childrenContainer) return;
-    
-    const isExpanded = tagItem.classList.contains('expanded');
-    
-    if (isExpanded) {
-        collapseTag(tagId);
-    } else {
-        expandTag(tagId);
+// Функция для переключения групп тегов
+function toggleTagGroup(groupId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
+    
+    const childrenContainer = document.getElementById(`children-${groupId}`);
+    const toggleBtn = document.querySelector(`[data-tag-id="${groupId}"]`);
+    const icon = document.getElementById(`icon-${groupId}`);
+    
+    if (!childrenContainer || !toggleBtn || !icon) {
+        console.warn(`Elements not found for group ${groupId}`);
+        return;
+    }
+    
+    const isCollapsed = childrenContainer.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        // Разворачиваем
+        childrenContainer.classList.remove('collapsed');
+        toggleBtn.classList.add('expanded');
+        icon.style.transform = 'rotate(90deg)';
+        
+        // Сохраняем состояние
+        expandedTags.add(groupId.toString());
+    } else {
+        // Сворачиваем
+        childrenContainer.classList.add('collapsed');
+        toggleBtn.classList.remove('expanded');
+        icon.style.transform = 'rotate(0deg)';
+        
+        // Удаляем из сохраненного состояния
+        expandedTags.delete(groupId.toString());
+    }
+    
+    saveTagState();
+}
+
+// Функция для восстановления состояния тегов
+function restoreTagState(tagId) {
+    const childrenContainer = document.getElementById(`children-${tagId}`);
+    const toggleBtn = document.querySelector(`[data-tag-id="${tagId}"]`);
+    const icon = document.getElementById(`icon-${tagId}`);
+    
+    if (childrenContainer && toggleBtn && icon) {
+        childrenContainer.classList.remove('collapsed');
+        toggleBtn.classList.add('expanded');
+        icon.style.transform = 'rotate(90deg)';
+    }
+}
+
+// Функция для автоматического разворачивания родительских групп при активном дочернем элементе
+function expandParentGroupsForActiveTag() {
+    const activeTag = document.querySelector('.tag-item.active, .tag-item-link.active');
+    if (!activeTag) return;
+    
+    // Находим все родительские контейнеры
+    let element = activeTag;
+    while (element) {
+        element = element.closest('.tag-children');
+        if (element) {
+            const groupId = element.id.replace('children-', '');
+            expandedTags.add(groupId);
+            restoreTagState(groupId);
+            element = element.parentElement;
+        }
+    }
+    
+    saveTagState();
+}
+
+// Обновленная функция toggleTagChildren (оставляем для совместимости)
+function toggleTagChildren(tagId, event) {
+    toggleTagGroup(tagId.toString(), event);
 }
 
 window.addEventListener('resize', function() {

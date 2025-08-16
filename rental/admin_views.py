@@ -306,7 +306,10 @@ def add_product(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            product = form.save(commit=False)
+            product.available_quantity = product.quantity
+            product.save()
+            form.save_m2m()
             messages.success(request, 'Товар успешно добавлен')
             return redirect('product_management')
     else:
@@ -1113,3 +1116,85 @@ def barcode_lookup(request):
         })
     except Product.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Товар не найден'})
+    
+@user_passes_test(is_admin)
+def discount_codes_management(request):
+    """Управление скидочными кодами"""
+    from .models import DiscountCode
+    
+    if request.method == 'POST':
+        if 'add_code' in request.POST:
+            code = request.POST.get('code', '').strip().upper()
+            discount_percent = request.POST.get('discount_percent')
+            
+            if code and discount_percent:
+                try:
+                    discount_percent = float(discount_percent)
+                    if 0 <= discount_percent <= 100:
+                        DiscountCode.objects.create(
+                            code=code,
+                            discount_percent=discount_percent
+                        )
+                        messages.success(request, f'Скидочный код "{code}" успешно создан')
+                    else:
+                        messages.error(request, 'Процент скидки должен быть от 0 до 100')
+                except (ValueError, TypeError):
+                    messages.error(request, 'Неверный процент скидки')
+                except Exception as e:
+                    if 'UNIQUE constraint' in str(e):
+                        messages.error(request, 'Такой код уже существует')
+                    else:
+                        messages.error(request, 'Ошибка при создании кода')
+            else:
+                messages.error(request, 'Заполните все поля')
+            return redirect('discount_codes_management')
+        
+        elif 'toggle_status' in request.POST:
+            code_id = request.POST.get('code_id')
+            try:
+                discount_code = DiscountCode.objects.get(id=code_id)
+                discount_code.is_active = not discount_code.is_active
+                discount_code.save()
+                status = "активирован" if discount_code.is_active else "деактивирован"
+                messages.success(request, f'Код "{discount_code.code}" {status}')
+            except DiscountCode.DoesNotExist:
+                messages.error(request, 'Код не найден')
+            return redirect('discount_codes_management')
+        
+        elif 'delete_code' in request.POST:
+            code_id = request.POST.get('code_id')
+            try:
+                discount_code = DiscountCode.objects.get(id=code_id)
+                code_name = discount_code.code
+                discount_code.delete()
+                messages.success(request, f'Код "{code_name}" удален')
+            except DiscountCode.DoesNotExist:
+                messages.error(request, 'Код не найден')
+            return redirect('discount_codes_management')
+    
+    discount_codes = DiscountCode.objects.all().order_by('-created_at')
+    
+    context = {
+        'discount_codes': discount_codes,
+    }
+    return render(request, 'rental/admin/discount_codes.html', context)
+
+@user_passes_test(is_admin)
+def check_discount_code_api(request):
+    """API для проверки скидочного кода"""
+    from .models import DiscountCode
+    
+    code = request.GET.get('code', '').strip().upper()
+    
+    if not code:
+        return JsonResponse({'valid': False, 'error': 'Код не указан'})
+    
+    try:
+        discount_code = DiscountCode.objects.get(code=code, is_active=True)
+        return JsonResponse({
+            'valid': True,
+            'code': discount_code.code,
+            'discount_percent': float(discount_code.discount_percent)
+        })
+    except DiscountCode.DoesNotExist:
+        return JsonResponse({'valid': False, 'error': 'Неверный код скидки или код неактивен'})

@@ -89,17 +89,9 @@
                         
                         <!-- СУММА ЗАЛОГА - только для админов -->
                         {% if form.deposit_amount %}
-                        <div class="col-12 mt-4">
-                            <h6 class="text-warning mb-3">
-                                <i class="fas fa-shield-alt me-2"></i>Финансовая информация
-                            </h6>
-                        </div>
-                        
                         <div class="col-md-6">
                             <label for="{{ form.deposit_amount.id_for_label }}" class="form-label">
-                                <i class="fas fa-shield-alt text-warning me-1"></i>
                                 Сумма залога (сум)
-                                <small class="text-info">(только для админов)</small>
                             </label>
                             <div class="input-group">
                                 {{ form.deposit_amount }}
@@ -113,6 +105,25 @@
                         </div>
                         <div class="col-md-6"></div>
                         {% endif %}
+                        
+                        <!-- Код скидки -->
+                        <div class="col-md-6">
+                            <label for="{{ form.discount_code.id_for_label }}" class="form-label">
+                                Код скидки
+                                <small class="text-muted">(необязательно)</small>
+                            </label>
+                            <div class="input-group">
+                                {{ form.discount_code }}
+                                <button type="button" class="btn btn-outline-secondary" id="checkDiscountBtn" onclick="checkDiscountCode()">
+                                    <i class="fas fa-check"></i> Проверить
+                                </button>
+                            </div>
+                            {% if form.discount_code.errors %}
+                                <div class="text-danger">{{ form.discount_code.errors }}</div>
+                            {% endif %}
+                            <div id="discountResult" class="mt-2"></div>
+                        </div>
+                        <div class="col-md-6"></div>
                         
                         <!-- Период аренды -->
                         <div class="col-12 mt-4">
@@ -364,19 +375,21 @@ function changeCartQuantity(productId, delta) {
 function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const totalAmount = document.getElementById('totalAmount');
+    const submitBtn = document.getElementById('submitBtn');
     
     if (cart.length === 0) {
-        cartItems.innerHTML = '<p class="text-muted">Нет товаров в заявке</p>';
+        cartItems.innerHTML = '<p class="text-muted">Корзина пуста</p>';
         totalAmount.textContent = '0 сум';
+        submitBtn.disabled = true;
         return;
     }
     
     let html = '';
-    let total = 0;
+    let subtotal = 0;
     
     cart.forEach(item => {
         const itemTotal = item.price * item.quantity;
-        total += itemTotal;
+        subtotal += itemTotal;
         
         html += `
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
@@ -404,8 +417,31 @@ function updateCartDisplay() {
         `;
     });
     
+    // Применяем скидку если есть
+    let discountAmount = 0;
+    let finalTotal = subtotal;
+    
+    if (appliedDiscount.code && appliedDiscount.percent > 0) {
+        discountAmount = (subtotal * appliedDiscount.percent) / 100;
+        finalTotal = subtotal - discountAmount;
+        appliedDiscount.amount = discountAmount;
+        
+        html += `
+            <hr>
+            <div class="d-flex justify-content-between text-muted">
+                <span>Подытог:</span>
+                <span>${formatPrice(subtotal)} сум</span>
+            </div>
+            <div class="d-flex justify-content-between text-success">
+                <span>Скидка ${appliedDiscount.percent}%:</span>
+                <span>-${formatPrice(discountAmount)} сум</span>
+            </div>
+        `;
+    }
+    
     cartItems.innerHTML = html;
-    totalAmount.textContent = `${formatPrice(total)} сум`;
+    totalAmount.textContent = `${formatPrice(finalTotal)} сум`;
+    submitBtn.disabled = false;
     
     // Обновляем скрытое поле с данными корзины
     document.getElementById('cartData').value = JSON.stringify(cart);
@@ -420,7 +456,13 @@ function updateDepositDisplay() {
     if (!depositInput || !depositDisplay || !totalWithDeposit) return;
     
     const depositAmount = parseFloat(depositInput.value) || 0;
-    const orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Применяем скидку к общей сумме заказа
+    if (appliedDiscount.code && appliedDiscount.percent > 0) {
+        const discountAmount = (orderTotal * appliedDiscount.percent) / 100;
+        orderTotal = orderTotal - discountAmount;
+    }
     
     depositDisplay.textContent = `${formatPrice(depositAmount)} сум`;
     totalWithDeposit.textContent = `${formatPrice(orderTotal + depositAmount)} сум`;
